@@ -51,14 +51,19 @@
   }
 
   function normalize(value) {
-    return String(value || '')
-      .toLowerCase()
+    var text = String(value || '')
+      .toLocaleLowerCase()
+      .normalize('NFKC')
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/\u0111/g, 'd')
-      .replace(/[’']/g, '')
-      .replace(/[^a-z0-9]+/g, ' ')
-      .trim();
+      .replace(/[’']/g, '');
+
+    try {
+      return text.replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+    } catch (err) {
+      return text.replace(/[^\w\u3400-\u9fff\u3040-\u30ff\uac00-\ud7af]+/g, ' ').trim();
+    }
   }
 
   function compactSpaces(value) {
