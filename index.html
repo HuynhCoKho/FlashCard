@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FlashCard học ngoại ngữ</title>
+    <link rel="stylesheet" href="styles.css?v=20260630-flashcard">
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="side-panel" aria-label="Bảng điều khiển">
+        <header class="brand">
+          <p class="eyebrow">GitHub Pages</p>
+          <h1>FlashCard</h1>
+        </header>
+
+        <section class="panel-section">
+          <label class="field-label" for="playerName">Người chơi</label>
+          <input id="playerName" class="text-field" type="text" maxlength="28" autocomplete="name" placeholder="Tên của bạn">
+        </section>
+
+        <section class="panel-section">
+          <div class="section-row">
+            <h2>Chọn bộ từ</h2>
+            <button id="refreshButton" class="icon-button" type="button" title="Tải lại dữ liệu" aria-label="Tải lại dữ liệu">↻</button>
+          </div>
+          <div id="sheetList" class="sheet-list" aria-live="polite"></div>
+        </section>
+
+        <section class="panel-section stats-grid" aria-label="Thống kê">
+          <div class="stat-card">
+            <span id="totalPlayers">0</span>
+            <p>người chơi</p>
+          </div>
+          <div class="stat-card">
+            <span id="totalPlays">0</span>
+            <p>lượt chơi</p>
+          </div>
+        </section>
+
+        <section class="panel-section">
+          <h2>Top 10</h2>
+          <ol id="leaderboard" class="leaderboard"></ol>
+        </section>
+
+        <p id="connectionStatus" class="status-badge">Đang khởi động</p>
+      </aside>
+
+      <section class="game-panel" aria-label="Khu vực học từ vựng">
+        <header class="game-header">
+          <div>
+            <p id="activeSheetLabel" class="eyebrow">Chưa chọn bộ từ</p>
+            <h2 id="gameTitle">Học từ vựng ngoại ngữ</h2>
+          </div>
+          <div class="score-pill">
+            <span>Điểm</span>
+            <strong id="scoreValue">0</strong>
+          </div>
+        </header>
+
+        <div class="progress-strip" aria-label="Tiến độ phiên chơi">
+          <span id="correctCount">0 đúng</span>
+          <span id="wrongCount">0 sai</span>
+          <span id="streakCount">Chuỗi 0</span>
+        </div>
+
+        <article id="flashcard" class="flashcard" aria-live="polite">
+          <p id="cardHint" class="card-kicker">Chọn một sheet ở bên trái để bắt đầu</p>
+          <div id="vietnameseText" class="vietnamese-text">Sẵn sàng</div>
+          <p id="noteText" class="note-text" hidden></p>
+        </article>
+
+        <form id="answerForm" class="answer-form">
+          <label class="field-label" for="answerInput">Nhập từ ngoại ngữ tương ứng</label>
+          <div class="answer-row">
+            <input id="answerInput" class="answer-input" type="text" autocomplete="off" spellcheck="false" disabled>
+            <button id="submitButton" type="submit" disabled>Enter</button>
+          </div>
+        </form>
+
+        <div id="feedback" class="feedback" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <script src="config.js?v=20260630-flashcard"></script>
+    <script src="script.js?v=20260630-flashcard"></script>
+  </body>
+</html>
