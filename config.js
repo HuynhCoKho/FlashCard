@@ -4,5 +4,12 @@ window.FLASHCARD_CONFIG = {
   POINTS_CORRECT: 10,
   POINTS_WRONG: -4,
   RECENT_WINDOW: 6,
-  DEFAULT_PLAYER_NAME: 'Người học'
+  DEFAULT_PLAYER_NAME: 'Người học',
+  FALLBACK_SHEETS: [
+    { name: 'English', count: 3310 },
+    { name: 'Chinese', count: 1 },
+    { name: 'Thai', count: 1 },
+    { name: 'Korean', count: 2 },
+    { name: 'Deutsche', count: 1 }
+  ]
 };

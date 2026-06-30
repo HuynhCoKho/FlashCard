@@ -36,6 +36,7 @@
     words: [],
     current: null,
     recentIds: [],
+    loadingMore: false,
     score: 0,
     correct: 0,
     wrong: 0,
@@ -183,6 +184,7 @@
     state.words = [];
     state.current = null;
     state.recentIds = [];
+    state.loadingMore = false;
     state.score = 0;
     state.correct = 0;
     state.wrong = 0;
@@ -205,7 +207,7 @@
     els.answerInput.disabled = true;
     els.submitButton.disabled = true;
 
-    api({ action: 'words', sheet: sheetName }, 240000)
+    loadWords(sheetName)
       .then(function (payload) {
         state.words = (payload.words || []).filter(function (word) {
           return word && word.vi && word.answer;
@@ -228,6 +230,10 @@
 
   function nextCard() {
     if (!state.words.length) return;
+    var answered = state.correct + state.wrong;
+    if ((state.words.length < 12 || (answered > 0 && answered % 20 === 0)) && !state.loadingMore) {
+      fetchMoreWords();
+    }
     var candidates = state.words.filter(function (word) {
       return state.recentIds.indexOf(word.id) === -1;
     });
@@ -239,6 +245,35 @@
       state.recentIds.shift();
     }
     renderCard(chosen);
+  }
+
+  function loadWords(sheetName) {
+    return api({ action: 'batch', sheet: sheetName, limit: 50 }, 90000)
+      .catch(function () {
+        return api({ action: 'words', sheet: sheetName }, 240000);
+      });
+  }
+
+  function fetchMoreWords() {
+    if (!state.activeSheet) return;
+    state.loadingMore = true;
+    api({ action: 'batch', sheet: state.activeSheet, limit: 40 }, 90000)
+      .then(function (payload) {
+        var existing = {};
+        state.words.forEach(function (word) {
+          existing[word.id] = true;
+        });
+        (payload.words || []).forEach(function (word) {
+          if (word && word.vi && word.answer && !existing[word.id]) {
+            state.words.push(word);
+            existing[word.id] = true;
+          }
+        });
+      })
+      .catch(function () {})
+      .finally(function () {
+        state.loadingMore = false;
+      });
   }
 
   function renderCard(word) {
@@ -341,18 +376,28 @@
   }
 
   function loadHome() {
-    setStatus('Đang tải dữ liệu', 'pending');
+    if (!state.sheets.length && Array.isArray(config.FALLBACK_SHEETS) && config.FALLBACK_SHEETS.length) {
+      state.sheets = config.FALLBACK_SHEETS.slice();
+      renderSheets();
+      setStatus('Sẵn sàng', 'ok');
+    } else {
+      setStatus('Đang tải dữ liệu', 'pending');
+    }
+
     api({ action: 'bootstrap' }, 240000)
       .then(function (payload) {
         state.sheets = payload.sheets || [];
         renderSheets();
         renderStats(payload.stats || {});
         setStatus('Đã kết nối', 'ok');
-        if (state.sheets.length) selectSheet(state.sheets[0].name);
       })
       .catch(function (err) {
-        setStatus('Cần tải lại dữ liệu', 'error');
-        els.sheetList.innerHTML = '<p class="empty-state">' + escapeHtml(err.message) + '</p>';
+        if (!state.sheets.length) {
+          els.sheetList.innerHTML = '<p class="empty-state">' + escapeHtml(err.message) + '</p>';
+          setStatus('Cần tải lại dữ liệu', 'error');
+        } else {
+          setStatus('Dùng danh sách đã lưu', 'ok');
+        }
         renderStats({ leaderboard: [] });
       });
   }

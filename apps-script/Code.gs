@@ -35,6 +35,14 @@ function doGet(e) {
       });
     }
 
+    if (action === 'batch') {
+      return output_(callback, {
+        ok: true,
+        sheet: params.sheet || '',
+        words: readWordBatch_(String(params.sheet || ''), Number(params.limit || 40))
+      });
+    }
+
     if (action === 'start') {
       appendPlay_(params, 'START');
       return output_(callback, { ok: true, stats: getStats_(true) });
@@ -118,6 +126,57 @@ function readWords_(sheetName) {
       note: clean_(row[columns.note])
     };
   }).filter(Boolean);
+}
+
+function readWordBatch_(sheetName, limit) {
+  sheetName = String(sheetName || '').trim();
+  limit = Math.max(1, Math.min(80, Number(limit || 40)));
+  if (!sheetName) throw new Error('Thiếu tên sheet.');
+  if (SYSTEM_SHEETS[sheetName.toUpperCase()]) throw new Error('Sheet này không phải bộ từ vựng.');
+
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) throw new Error('Không tìm thấy sheet "' + sheetName + '".');
+
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  if (lastRow < 2 || lastCol < 2) return [];
+
+  var headers = sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0];
+  var columns = detectColumns_(headers);
+  var rowNumbers = pickRandomRows_(lastRow, limit);
+  var words = [];
+
+  for (var i = 0; i < rowNumbers.length && words.length < limit; i += 1) {
+    var rowNumber = rowNumbers[i];
+    var row = sheet.getRange(rowNumber, 1, 1, lastCol).getDisplayValues()[0];
+    var vi = clean_(row[columns.vi]);
+    var answer = clean_(row[columns.answer]);
+    if (!vi || !answer) continue;
+    words.push({
+      id: sheetName + '-' + rowNumber,
+      vi: vi,
+      answer: answer,
+      aliases: splitAliases_(row[columns.aliases]),
+      note: clean_(row[columns.note])
+    });
+  }
+
+  return words;
+}
+
+function pickRandomRows_(lastRow, limit) {
+  var maxDataRows = Math.max(0, lastRow - 1);
+  var target = Math.min(maxDataRows, limit * 3);
+  var seen = {};
+  var rows = [];
+  while (rows.length < target) {
+    var rowNumber = 2 + Math.floor(Math.random() * maxDataRows);
+    if (seen[rowNumber]) continue;
+    seen[rowNumber] = true;
+    rows.push(rowNumber);
+  }
+  return rows;
 }
 
 function detectColumns_(headers) {
