@@ -78,6 +78,13 @@ button {
   line-height: 1.05;
 }
 
+.author {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .eyebrow {
   margin: 0 0 5px;
   color: var(--accent);
