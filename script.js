@@ -92,8 +92,8 @@
       var script = document.createElement('script');
       var timer = window.setTimeout(function () {
         cleanup();
-        reject(new Error('Dữ liệu phản hồi chậm. Vui lòng thử tải lại.'));
-      }, timeoutMs || 25000);
+        reject(new Error('Apps Script phản hồi chậm. Vui lòng bấm tải lại hoặc chờ thêm một chút rồi thử lại.'));
+      }, timeoutMs || 90000);
 
       function cleanup() {
         window.clearTimeout(timer);
@@ -205,7 +205,7 @@
     els.answerInput.disabled = true;
     els.submitButton.disabled = true;
 
-    api({ action: 'words', sheet: sheetName }, 30000)
+    api({ action: 'words', sheet: sheetName }, 90000)
       .then(function (payload) {
         state.words = (payload.words || []).filter(function (word) {
           return word && word.vi && word.answer;
@@ -342,7 +342,7 @@
 
   function loadHome() {
     setStatus('Đang tải dữ liệu', 'pending');
-    api({ action: 'bootstrap' }, 30000)
+    api({ action: 'bootstrap' }, 90000)
       .then(function (payload) {
         state.sheets = payload.sheets || [];
         renderSheets();
@@ -351,7 +351,7 @@
         if (state.sheets.length) selectSheet(state.sheets[0].name);
       })
       .catch(function (err) {
-        setStatus('Cần cấu hình Apps Script', 'error');
+        setStatus('Cần tải lại dữ liệu', 'error');
         els.sheetList.innerHTML = '<p class="empty-state">' + escapeHtml(err.message) + '</p>';
         renderStats({ leaderboard: [] });
       });
