@@ -332,44 +332,99 @@
     if (!('speechSynthesis' in window)) return;
     try {
       window.speechSynthesis.cancel();
-      var utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = guessLanguage(state.activeSheet, text);
-      utterance.voice = pickVoice(utterance.lang);
-      utterance.rate = 0.92;
-      window.setTimeout(function () {
-        window.speechSynthesis.speak(utterance);
-      }, 60);
+      var candidates = guessLanguageCandidates(state.activeSheet, text);
+      speakWithVoices(text, candidates, 0);
     } catch (err) {}
   }
 
-  function pickVoice(lang) {
+  function speakWithVoices(text, candidates, attempt) {
+    var utterance = new SpeechSynthesisUtterance(text);
+    var voice = pickVoice(candidates);
+    utterance.voice = voice;
+    utterance.lang = voice ? voice.lang : candidates[0];
+    utterance.rate = 0.92;
+
+    if (!voice && attempt < 8 && window.speechSynthesis.getVoices().length === 0) {
+      window.setTimeout(function () {
+        speakWithVoices(text, candidates, attempt + 1);
+      }, 160);
+      return;
+    }
+
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function pickVoice(candidates) {
     if (!window.speechSynthesis || !window.speechSynthesis.getVoices) return null;
     var voices = window.speechSynthesis.getVoices() || [];
     if (!voices.length) return null;
-    var base = String(lang || '').split('-')[0].toLowerCase();
-    return voices.find(function (voice) {
-      return String(voice.lang || '').toLowerCase() === String(lang || '').toLowerCase();
-    }) || voices.find(function (voice) {
-      return String(voice.lang || '').toLowerCase().indexOf(base) === 0;
-    }) || null;
+    candidates = candidates || ['en-US'];
+
+    for (var i = 0; i < candidates.length; i += 1) {
+      var lang = String(candidates[i] || '').toLowerCase();
+      var exact = voices.find(function (voice) {
+        return String(voice.lang || '').toLowerCase() === lang;
+      });
+      if (exact) return exact;
+    }
+
+    for (var j = 0; j < candidates.length; j += 1) {
+      var base = String(candidates[j] || '').split('-')[0].toLowerCase();
+      var close = voices.find(function (voice) {
+        return String(voice.lang || '').toLowerCase().indexOf(base) === 0;
+      });
+      if (close) return close;
+    }
+
+    return null;
   }
 
-  function guessLanguage(sheetName, text) {
+  function guessLanguageCandidates(sheetName, text) {
     var name = normalize(sheetName);
     var value = String(text || '');
-    if (name.indexOf('english') >= 0 || name.indexOf('anh') >= 0) return 'en-US';
-    if (name.indexOf('japan') >= 0 || name.indexOf('japanese') >= 0 || name.indexOf('nhat') >= 0) return 'ja-JP';
-    if (name.indexOf('korea') >= 0 || name.indexOf('korean') >= 0 || name.indexOf('han') >= 0) return 'ko-KR';
-    if (name.indexOf('china') >= 0 || name.indexOf('chinese') >= 0 || name.indexOf('trung') >= 0 || name.indexOf('hoa') >= 0) return 'zh-CN';
-    if (name.indexOf('thai') >= 0 || name.indexOf('thailand') >= 0 || name.indexOf('thai lan') >= 0) return 'th-TH';
-    if (name.indexOf('french') >= 0 || name.indexOf('phap') >= 0) return 'fr-FR';
-    if (name.indexOf('german') >= 0 || name.indexOf('deutsch') >= 0 || name.indexOf('deutsche') >= 0 || name.indexOf('duc') >= 0) return 'de-DE';
-    if (name.indexOf('spanish') >= 0 || name.indexOf('tay ban nha') >= 0) return 'es-ES';
-    if (/[\u0e00-\u0e7f]/.test(value)) return 'th-TH';
-    if (/[\u3040-\u30ff]/.test(value)) return 'ja-JP';
-    if (/[\uac00-\ud7af]/.test(value)) return 'ko-KR';
-    if (/[\u3400-\u9fff]/.test(value)) return 'zh-CN';
-    return /[a-z]/i.test(value) ? 'en-US' : 'vi-VN';
+    var fromText = detectLanguageFromText(value);
+    if (fromText.length) return fromText;
+    var fromName = detectLanguageFromName(name);
+    if (fromName.length) return fromName;
+    return /[a-z]/i.test(value) ? ['en-US'] : ['vi-VN'];
+  }
+
+  function detectLanguageFromText(value) {
+    if (/[\u0e00-\u0e7f]/.test(value)) return ['th-TH'];
+    if (/[\u0900-\u097f]/.test(value)) return ['sa-IN', 'hi-IN'];
+    if (/[\u3040-\u30ff]/.test(value)) return ['ja-JP'];
+    if (/[\uac00-\ud7af]/.test(value)) return ['ko-KR'];
+    if (/[\u3400-\u9fff]/.test(value)) return ['zh-CN', 'zh-TW', 'zh-HK'];
+    if (/[\u0400-\u04ff]/.test(value)) return ['ru-RU'];
+    if (/[\u0370-\u03ff]/.test(value)) return ['el-GR'];
+    if (/[\u0590-\u05ff]/.test(value)) return ['he-IL'];
+    if (/[\u0600-\u06ff]/.test(value)) return ['ar-SA', 'ar'];
+    return [];
+  }
+
+  function detectLanguageFromName(name) {
+    var rules = [
+      { keys: ['english', 'tieng anh', 'anh'], langs: ['en-US', 'en-GB'] },
+      { keys: ['japanese', 'japan', 'tieng nhat', 'nhat'], langs: ['ja-JP'] },
+      { keys: ['korean', 'korea', 'tieng han', 'han quoc', 'han'], langs: ['ko-KR'] },
+      { keys: ['chinese', 'china', 'mandarin', 'tieng trung', 'trung quoc', 'trung', 'hoa'], langs: ['zh-CN', 'zh-TW', 'zh-HK'] },
+      { keys: ['thai', 'thailand', 'tieng thai', 'thai lan'], langs: ['th-TH'] },
+      { keys: ['german', 'deutsch', 'deutsche', 'tieng duc', 'duc'], langs: ['de-DE'] },
+      { keys: ['french', 'francais', 'tieng phap', 'phap'], langs: ['fr-FR'] },
+      { keys: ['spanish', 'espanol', 'tieng tay ban nha', 'tay ban nha'], langs: ['es-ES', 'es-MX'] },
+      { keys: ['sanskrit', 'phan', 'tieng phan'], langs: ['sa-IN', 'hi-IN'] },
+      { keys: ['hindi', 'tieng hindi'], langs: ['hi-IN'] },
+      { keys: ['russian', 'tieng nga', 'nga'], langs: ['ru-RU'] },
+      { keys: ['greek', 'tieng hy lap', 'hy lap'], langs: ['el-GR'] },
+      { keys: ['arabic', 'tieng a rap', 'a rap'], langs: ['ar-SA', 'ar'] }
+    ];
+
+    for (var i = 0; i < rules.length; i += 1) {
+      if (rules[i].keys.some(function (key) { return name.indexOf(key) >= 0; })) {
+        return rules[i].langs;
+      }
+    }
+    return [];
   }
 
   function submitScoreIfNeeded() {
