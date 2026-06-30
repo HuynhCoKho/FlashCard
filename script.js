@@ -356,14 +356,20 @@
 
   function guessLanguage(sheetName, text) {
     var name = normalize(sheetName);
+    var value = String(text || '');
     if (name.indexOf('english') >= 0 || name.indexOf('anh') >= 0) return 'en-US';
-    if (name.indexOf('japan') >= 0 || name.indexOf('nhat') >= 0) return 'ja-JP';
-    if (name.indexOf('korea') >= 0 || name.indexOf('han') >= 0) return 'ko-KR';
-    if (name.indexOf('china') >= 0 || name.indexOf('trung') >= 0) return 'zh-CN';
+    if (name.indexOf('japan') >= 0 || name.indexOf('japanese') >= 0 || name.indexOf('nhat') >= 0) return 'ja-JP';
+    if (name.indexOf('korea') >= 0 || name.indexOf('korean') >= 0 || name.indexOf('han') >= 0) return 'ko-KR';
+    if (name.indexOf('china') >= 0 || name.indexOf('chinese') >= 0 || name.indexOf('trung') >= 0 || name.indexOf('hoa') >= 0) return 'zh-CN';
+    if (name.indexOf('thai') >= 0 || name.indexOf('thailand') >= 0 || name.indexOf('thai lan') >= 0) return 'th-TH';
     if (name.indexOf('french') >= 0 || name.indexOf('phap') >= 0) return 'fr-FR';
-    if (name.indexOf('german') >= 0 || name.indexOf('duc') >= 0) return 'de-DE';
+    if (name.indexOf('german') >= 0 || name.indexOf('deutsch') >= 0 || name.indexOf('deutsche') >= 0 || name.indexOf('duc') >= 0) return 'de-DE';
     if (name.indexOf('spanish') >= 0 || name.indexOf('tay ban nha') >= 0) return 'es-ES';
-    return /[a-z]/i.test(text) ? 'en-US' : 'vi-VN';
+    if (/[\u0e00-\u0e7f]/.test(value)) return 'th-TH';
+    if (/[\u3040-\u30ff]/.test(value)) return 'ja-JP';
+    if (/[\uac00-\ud7af]/.test(value)) return 'ko-KR';
+    if (/[\u3400-\u9fff]/.test(value)) return 'zh-CN';
+    return /[a-z]/i.test(value) ? 'en-US' : 'vi-VN';
   }
 
   function submitScoreIfNeeded() {
