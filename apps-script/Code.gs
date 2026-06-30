@@ -86,11 +86,7 @@ function countVocabularyRows_(sheet) {
   var lastRow = sheet.getLastRow();
   var lastCol = sheet.getLastColumn();
   if (lastRow < 2 || lastCol < 2) return 0;
-  var values = sheet.getRange(1, 1, lastRow, lastCol).getDisplayValues();
-  var columns = detectColumns_(values[0]);
-  return values.slice(1).filter(function (row) {
-    return String(row[columns.vi] || '').trim() && String(row[columns.answer] || '').trim();
-  }).length;
+  return Math.max(0, lastRow - 1);
 }
 
 function readWords_(sheetName) {
