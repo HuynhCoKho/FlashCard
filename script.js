@@ -311,7 +311,7 @@
       state.streak += 1;
       els.feedback.textContent = 'Đúng: ' + state.current.answer;
       els.flashcard.classList.add('is-correct');
-      speak(state.current.answer);
+      speak(answer || state.current.answer);
       updateScoreboard();
       submitScoreIfNeeded();
       window.setTimeout(nextCard, 520);
@@ -334,9 +334,24 @@
       window.speechSynthesis.cancel();
       var utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = guessLanguage(state.activeSheet, text);
+      utterance.voice = pickVoice(utterance.lang);
       utterance.rate = 0.92;
-      window.speechSynthesis.speak(utterance);
+      window.setTimeout(function () {
+        window.speechSynthesis.speak(utterance);
+      }, 60);
     } catch (err) {}
+  }
+
+  function pickVoice(lang) {
+    if (!window.speechSynthesis || !window.speechSynthesis.getVoices) return null;
+    var voices = window.speechSynthesis.getVoices() || [];
+    if (!voices.length) return null;
+    var base = String(lang || '').split('-')[0].toLowerCase();
+    return voices.find(function (voice) {
+      return String(voice.lang || '').toLowerCase() === String(lang || '').toLowerCase();
+    }) || voices.find(function (voice) {
+      return String(voice.lang || '').toLowerCase().indexOf(base) === 0;
+    }) || null;
   }
 
   function guessLanguage(sheetName, text) {
