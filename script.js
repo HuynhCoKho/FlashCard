@@ -92,8 +92,8 @@
       var script = document.createElement('script');
       var timer = window.setTimeout(function () {
         cleanup();
-        reject(new Error('Apps Script phản hồi chậm. Vui lòng bấm tải lại hoặc chờ thêm một chút rồi thử lại.'));
-      }, timeoutMs || 90000);
+        reject(new Error('Apps Script phản hồi quá chậm. Vui lòng bấm tải lại hoặc thử lại sau ít phút.'));
+      }, timeoutMs || 240000);
 
       function cleanup() {
         window.clearTimeout(timer);
@@ -205,7 +205,7 @@
     els.answerInput.disabled = true;
     els.submitButton.disabled = true;
 
-    api({ action: 'words', sheet: sheetName }, 90000)
+    api({ action: 'words', sheet: sheetName }, 240000)
       .then(function (payload) {
         state.words = (payload.words || []).filter(function (word) {
           return word && word.vi && word.answer;
@@ -342,7 +342,7 @@
 
   function loadHome() {
     setStatus('Đang tải dữ liệu', 'pending');
-    api({ action: 'bootstrap' }, 90000)
+    api({ action: 'bootstrap' }, 240000)
       .then(function (payload) {
         state.sheets = payload.sheets || [];
         renderSheets();
