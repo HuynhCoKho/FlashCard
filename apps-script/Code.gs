@@ -123,6 +123,7 @@ function readWords_(sheetName) {
       vi: vi,
       answer: answer,
       aliases: splitAliases_(row[columns.aliases]),
+      pronunciation: clean_(row[columns.pronunciation]),
       note: clean_(row[columns.note])
     };
   }).filter(Boolean);
@@ -158,6 +159,7 @@ function readWordBatch_(sheetName, limit) {
       vi: vi,
       answer: answer,
       aliases: splitAliases_(row[columns.aliases]),
+      pronunciation: clean_(row[columns.pronunciation]),
       note: clean_(row[columns.note])
     });
   }
@@ -191,14 +193,20 @@ function detectColumns_(headers) {
     'spanish', 'tieng tay ban nha'
   ]);
   var aliases = findHeader_(normalized, ['aliases', 'alias', 'tu dong nghia', 'chap nhan', 'dap an khac']);
+  var pronunciation = findHeader_(normalized, [
+    'pronunciation', 'phonetic', 'transcription', 'ipa', 'pinyin', 'romaji',
+    'phien am', 'phat am', 'cach doc'
+  ]);
   var note = findHeader_(normalized, ['note', 'notes', 'ghi chu', 'giai thich']);
 
   if (vi < 0) vi = 0;
   if (answer < 0 || answer === vi) answer = vi === 0 ? 1 : 0;
+  if (pronunciation < 0 && headers.length >= 5) pronunciation = 4;
   return {
     vi: vi,
     answer: answer,
     aliases: aliases,
+    pronunciation: pronunciation,
     note: note
   };
 }

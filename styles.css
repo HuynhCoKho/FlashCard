@@ -407,6 +407,14 @@ button {
   line-height: 1.45;
 }
 
+.pronunciation-text {
+  margin: 0;
+  color: rgba(98, 113, 132, 0.74);
+  font-size: 18px;
+  font-style: normal;
+  line-height: 1.45;
+}
+
 .answer-form {
   display: grid;
   gap: 9px;

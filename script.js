@@ -23,6 +23,7 @@
     flashcard: document.getElementById('flashcard'),
     cardHint: document.getElementById('cardHint'),
     vietnameseText: document.getElementById('vietnameseText'),
+    pronunciationText: document.getElementById('pronunciationText'),
     noteText: document.getElementById('noteText'),
     answerForm: document.getElementById('answerForm'),
     answerInput: document.getElementById('answerInput'),
@@ -208,6 +209,7 @@
     els.gameTitle.textContent = 'Bộ từ ' + sheetName;
     els.cardHint.textContent = 'Đang chuẩn bị thẻ';
     els.vietnameseText.textContent = '...';
+    els.pronunciationText.hidden = true;
     els.noteText.hidden = true;
     els.answerInput.disabled = true;
     els.submitButton.disabled = true;
@@ -285,6 +287,12 @@
     els.flashcard.classList.remove('is-wrong', 'is-correct');
     els.cardHint.textContent = 'Dịch sang ngoại ngữ';
     els.vietnameseText.textContent = word.vi;
+    if (word.pronunciation) {
+      els.pronunciationText.textContent = word.pronunciation;
+      els.pronunciationText.hidden = false;
+    } else {
+      els.pronunciationText.hidden = true;
+    }
     if (word.note) {
       els.noteText.textContent = '(' + word.note + ')';
       els.noteText.hidden = false;
