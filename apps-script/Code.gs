@@ -66,6 +66,66 @@ function setupAuthorization() {
   return 'Đã kết nối Google Sheet và sẵn sàng cho FlashCard.';
 }
 
+/**
+ * Trả về phiên âm IPA của từ tiếng Anh.
+ *
+ * Dùng trong Google Sheets:
+ * =IPA(B2)
+ * =IPA(B2:B20)
+ */
+function IPA(value) {
+  if (Array.isArray(value)) {
+    return value.map(function (row) {
+      return row.map(function (cell) {
+        return lookupIpa_(cell);
+      });
+    });
+  }
+
+  return lookupIpa_(value);
+}
+
+function lookupIpa_(value) {
+  var word = clean_(value);
+  if (!word) return '';
+
+  var cache = CacheService.getScriptCache();
+  var cacheKey = 'ipa-v1-' + normalizeHeader_(word).slice(0, 180);
+  var cached = cache.get(cacheKey);
+  if (cached !== null) return cached;
+
+  var ipa = '';
+  try {
+    var url = 'https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(word);
+    var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    if (response.getResponseCode() === 200) {
+      ipa = extractIpa_(JSON.parse(response.getContentText()));
+    }
+  } catch (err) {
+    ipa = '';
+  }
+
+  try {
+    cache.put(cacheKey, ipa, 21600);
+  } catch (err2) {}
+
+  return ipa;
+}
+
+function extractIpa_(data) {
+  if (!data || !data[0]) return '';
+  if (data[0].phonetic) return clean_(data[0].phonetic);
+
+  var phonetics = data[0].phonetics || [];
+  for (var i = 0; i < phonetics.length; i += 1) {
+    if (phonetics[i] && phonetics[i].text) {
+      return clean_(phonetics[i].text);
+    }
+  }
+
+  return '';
+}
+
 function listVocabularySheets_(forceRefresh) {
   var cache = CacheService.getScriptCache();
   var cacheKey = 'flashcard-sheets-v1';
