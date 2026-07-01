@@ -114,16 +114,20 @@ function lookupIpa_(value) {
 
 function extractIpa_(data) {
   if (!data || !data[0]) return '';
-  if (data[0].phonetic) return clean_(data[0].phonetic);
+  if (data[0].phonetic) return normalizeIpaDisplay_(data[0].phonetic);
 
   var phonetics = data[0].phonetics || [];
   for (var i = 0; i < phonetics.length; i += 1) {
     if (phonetics[i] && phonetics[i].text) {
-      return clean_(phonetics[i].text);
+      return normalizeIpaDisplay_(phonetics[i].text);
     }
   }
 
   return '';
+}
+
+function normalizeIpaDisplay_(value) {
+  return clean_(value).replace(/\u0279/g, 'r');
 }
 
 function listVocabularySheets_(forceRefresh) {
