@@ -1,0 +1,8 @@
+{
+  "appId": "vn.huynhcokho.flashcard",
+  "appName": "FlashCard",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

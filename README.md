@@ -59,6 +59,21 @@ Repo `HuynhCoKho/FlashCard` có thể bật Pages từ branch chính, thư mục
 https://huynhcokho.github.io/FlashCard/
 ```
 
+## Ứng dụng Android
+
+Ứng dụng được đóng gói bằng Capacitor với mã gói `vn.huynhcokho.flashcard`.
+Giao diện được chứa trực tiếp trong APK; kết nối Google Sheet, cập nhật từ mới và
+bảng xếp hạng vẫn cần Internet.
+
+Build APK sau khi đã cài Java 21 và Android SDK:
+
+```text
+npm.cmd install
+npm.cmd run android:build
+```
+
+APK debug được tạo tại `android/app/build/outputs/apk/debug/app-debug.apk`.
+
 ## Tính năng
 
 - Chọn sheet để chơi.

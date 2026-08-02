@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FlashCard</string>
+    <string name="title_activity_main">FlashCard</string>
+    <string name="package_name">vn.huynhcokho.flashcard</string>
+    <string name="custom_url_scheme">vn.huynhcokho.flashcard</string>
+</resources>
