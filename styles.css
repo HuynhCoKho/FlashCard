@@ -282,6 +282,20 @@ button {
   font-weight: 700;
 }
 
+.privacy-link {
+  display: inline-block;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-decoration: none;
+}
+
+.privacy-link:hover,
+.privacy-link:focus-visible {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
 .status-badge[data-mode='ok'] {
   border-color: rgba(22, 131, 74, 0.35);
   color: var(--success);

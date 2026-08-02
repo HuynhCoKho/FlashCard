@@ -8,3 +8,6 @@ android/.gradle/
 android/build/
 android/app/build/
 FlashCard.apk
+FlashCard-v*.apk
+.release/
+FlashCard-release.aab

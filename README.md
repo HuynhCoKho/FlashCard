@@ -61,7 +61,8 @@ https://huynhcokho.github.io/FlashCard/
 
 ## Ứng dụng Android
 
-Ứng dụng được đóng gói bằng Capacitor với mã gói `vn.huynhcokho.flashcard`.
+Ứng dụng được đóng gói bằng Capacitor với mã gói `vn.huynhcokho.flashcard`,
+compile/target Android 16 (API 36), hỗ trợ từ Android 7.0 (API 24).
 Giao diện được chứa trực tiếp trong APK; kết nối Google Sheet, cập nhật từ mới và
 bảng xếp hạng vẫn cần Internet.
 
@@ -73,6 +74,14 @@ npm.cmd run android:build
 ```
 
 APK debug được tạo tại `android/app/build/outputs/apk/debug/app-debug.apk`.
+
+Bản phát hành Google Play dùng Android App Bundle tại
+`android/app/build/outputs/bundle/release/app-release.aab`. Khóa upload và mật
+khẩu phải được lưu riêng, tuyệt đối không commit vào Git.
+
+Tài sản Google Play nằm trong `play-store/`, gồm icon 512×512, feature graphic
+1024×500 và nội dung mô tả tiếng Việt. Chính sách quyền riêng tư công khai tại
+`privacy.html`.
 
 ## Tính năng
 

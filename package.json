@@ -5,13 +5,17 @@
   "scripts": {
     "sync:web": "node scripts/sync-web.mjs",
     "android:sync": "npm run sync:web && cap sync android",
-    "android:build": "npm run android:sync && cd android && gradlew.bat assembleDebug"
+    "android:build": "npm run android:sync && cd android && gradlew.bat assembleDebug",
+    "android:bundle": "npm run android:sync && cd android && gradlew.bat bundleRelease"
   },
   "dependencies": {
-    "@capacitor/android": "^7.4.3",
-    "@capacitor/core": "^7.4.3"
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/core": "^8.5.0"
   },
   "devDependencies": {
-    "@capacitor/cli": "^7.4.3"
+    "@capacitor/cli": "^8.5.0"
+  },
+  "overrides": {
+    "uuid": "11.1.1"
   }
 }
