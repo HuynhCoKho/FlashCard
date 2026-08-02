@@ -27,6 +27,10 @@ function doGet(e) {
       return output_(callback, { ok: true, sheets: listVocabularySheets_() });
     }
 
+    if (action === 'stats') {
+      return output_(callback, { ok: true, stats: getStats_() });
+    }
+
     if (action === 'words') {
       return output_(callback, {
         ok: true,
@@ -209,12 +213,14 @@ function readWordBatch_(sheetName, limit) {
 
   var headers = sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0];
   var columns = detectColumns_(headers);
+  // Một lần đọc duy nhất nhanh hơn nhiều so với gọi getRange cho từng dòng.
+  var values = sheet.getRange(2, 1, lastRow - 1, lastCol).getDisplayValues();
   var rowNumbers = pickRandomRows_(lastRow, limit);
   var words = [];
 
   for (var i = 0; i < rowNumbers.length && words.length < limit; i += 1) {
     var rowNumber = rowNumbers[i];
-    var row = sheet.getRange(rowNumber, 1, 1, lastCol).getDisplayValues()[0];
+    var row = values[rowNumber - 2];
     var vi = clean_(row[columns.vi]);
     var answer = clean_(row[columns.answer]);
     if (!vi || !answer) continue;

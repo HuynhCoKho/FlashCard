@@ -8,6 +8,8 @@ Trang GitHub Pages dùng Google Sheet làm nguồn từ vựng. Người học c
 - Apps Script đọc Google Sheet, tự liệt kê các sheet từ vựng và trả dữ liệu cho trang.
 - Sheet `LEADERBOARD` được Apps Script tự tạo để lưu lượt chơi, người chơi và điểm cao nhất.
 - Khi bạn thêm sheet mới hoặc thêm/bớt từ trong Google Sheet, bấm nút tải lại trên trang là dữ liệu được cập nhật.
+- Giao diện và danh sách sheet được hiện ngay từ cấu hình/cache; dữ liệu mới và thống kê được cập nhật nền.
+- Khi người dùng chọn một sheet, yêu cầu tải bộ từ đó được ưu tiên trước thống kê nền.
 
 ## Cấu trúc Google Sheet
 
@@ -63,6 +65,7 @@ https://huynhcokho.github.io/FlashCard/
 - Hiện nghĩa tiếng Việt ở flashcard.
 - Ghi chú được hiển thị mờ, in nghiêng, trong ngoặc.
 - Nhập đáp án và bấm Enter.
+- Phần viết tắt ở cuối đáp án là tùy chọn: với `Generative AI (GenAI)`, nhập `Generative AI` vẫn được tính đúng.
 - Đúng: cộng điểm và trình duyệt đọc to từ vừa nhập đúng.
 - Sai: trừ điểm, thẻ đỏ và rung nhẹ.
 - Từ xuất hiện ngẫu nhiên và hạn chế lặp lại quá sớm.

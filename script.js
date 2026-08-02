@@ -5,6 +5,8 @@
   var pointsCorrect = Number(config.POINTS_CORRECT || 10);
   var pointsWrong = Number(config.POINTS_WRONG || -4);
   var recentWindow = Number(config.RECENT_WINDOW || 6);
+  var cacheVersion = 'v2';
+  var cacheMaxAge = 24 * 60 * 60 * 1000;
 
   var els = {
     playerName: document.getElementById('playerName'),
@@ -43,8 +45,30 @@
     wrong: 0,
     streak: 0,
     requestId: 0,
-    bestSubmittedScore: 0
+    bestSubmittedScore: 0,
+    selectionToken: 0,
+    backgroundTimer: 0
   };
+
+  function cacheKey(type, name) {
+    return 'flashcard-' + cacheVersion + '-' + type + (name ? '-' + encodeURIComponent(name) : '');
+  }
+
+  function readCache(type, name, maxAge) {
+    try {
+      var cached = JSON.parse(localStorage.getItem(cacheKey(type, name)) || 'null');
+      if (!cached || !cached.savedAt || Date.now() - cached.savedAt > (maxAge || cacheMaxAge)) return null;
+      return cached.value;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function writeCache(type, name, value) {
+    try {
+      localStorage.setItem(cacheKey(type, name), JSON.stringify({ savedAt: Date.now(), value: value }));
+    } catch (err) {}
+  }
 
   function setStatus(text, mode) {
     els.connectionStatus.textContent = text;
@@ -65,6 +89,33 @@
     } catch (err) {
       return text.replace(/[^\w\u3400-\u9fff\u3040-\u30ff\uac00-\ud7af]+/g, ' ').trim();
     }
+  }
+
+  function withoutOptionalAbbreviation(value) {
+    var text = compactSpaces(value);
+    var match = text.match(/^(.*?)\s*\(([^()]*)\)\s*$/);
+    if (!match) return text;
+    var abbreviation = compactSpaces(match[2]);
+    if (!abbreviation || abbreviation.length > 16 || abbreviation.split(' ').length > 2) return text;
+    if (/[,;:!?()[\]{}]/.test(abbreviation)) return text;
+    var uppercaseCount = (abbreviation.match(/[A-Z]/g) || []).length;
+    if (uppercaseCount < 2 && !/[0-9.]/.test(abbreviation)) return text;
+    return compactSpaces(match[1]) || text;
+  }
+
+  function acceptedAnswerVariants(values) {
+    var seen = {};
+    var variants = [];
+    (values || []).forEach(function (value) {
+      [value, withoutOptionalAbbreviation(value)].forEach(function (candidate) {
+        var normalized = normalize(candidate);
+        if (normalized && !seen[normalized]) {
+          seen[normalized] = true;
+          variants.push(normalized);
+        }
+      });
+    });
+    return variants;
   }
 
   function compactSpaces(value) {
@@ -202,6 +253,9 @@
   }
 
   function selectSheet(sheetName) {
+    state.selectionToken += 1;
+    var selectionToken = state.selectionToken;
+    window.clearTimeout(state.backgroundTimer);
     resetRound(sheetName);
     renderSheets();
     setStatus('Đang tải ' + sheetName, 'pending');
@@ -214,25 +268,62 @@
     els.answerInput.disabled = true;
     els.submitButton.disabled = true;
 
+    var cachedWords = readCache('words', sheetName, cacheMaxAge);
+    if (cachedWords && cachedWords.length) {
+      activateWords(sheetName, cachedWords, selectionToken, true);
+    }
+
     loadWords(sheetName)
       .then(function (payload) {
-        state.words = (payload.words || []).filter(function (word) {
-          return word && word.vi && word.answer;
-        });
-        if (!state.words.length) {
+        if (selectionToken !== state.selectionToken) return;
+        var words = validWords(payload.words || []);
+        if (!words.length) {
           throw new Error('Sheet này chưa có đủ cột tiếng Việt và từ ngoại ngữ.');
         }
-        setStatus('Đã sẵn sàng', 'ok');
-        els.answerInput.disabled = false;
-        els.submitButton.disabled = false;
-        recordPlayStart();
-        nextCard();
+        writeCache('words', sheetName, words);
+        if (!cachedWords || !state.current) activateWords(sheetName, words, selectionToken, false);
+        else {
+          state.words = mergeWords(state.words, words);
+          setStatus('Đã cập nhật dữ liệu mới', 'ok');
+        }
       })
       .catch(function (err) {
+        if (selectionToken !== state.selectionToken) return;
+        if (state.current) {
+          setStatus('Đang dùng dữ liệu đã lưu', 'ok');
+          return;
+        }
         setStatus('Cần kiểm tra dữ liệu', 'error');
         els.cardHint.textContent = 'Không tải được bộ từ';
         els.vietnameseText.textContent = err.message;
       });
+  }
+
+  function validWords(words) {
+    return (words || []).filter(function (word) {
+      return word && word.vi && word.answer;
+    });
+  }
+
+  function mergeWords(existingWords, newWords) {
+    var byId = {};
+    (existingWords || []).concat(newWords || []).forEach(function (word) {
+      if (word && word.id) byId[word.id] = word;
+    });
+    return Object.keys(byId).map(function (id) { return byId[id]; });
+  }
+
+  function activateWords(sheetName, words, selectionToken, fromCache) {
+    if (selectionToken !== state.selectionToken || sheetName !== state.activeSheet) return;
+    state.words = validWords(words);
+    if (!state.words.length) return;
+    setStatus(fromCache ? 'Sẵn sàng từ dữ liệu đã lưu' : 'Đã sẵn sàng', 'ok');
+    els.answerInput.disabled = false;
+    els.submitButton.disabled = false;
+    if (!state.current) {
+      recordPlayStart();
+      nextCard();
+    }
   }
 
   function nextCard() {
@@ -308,9 +399,7 @@
     var answer = compactSpaces(els.answerInput.value);
     if (!answer) return;
 
-    var accepted = [state.current.answer].concat(state.current.aliases || [])
-      .map(normalize)
-      .filter(Boolean);
+    var accepted = acceptedAnswerVariants([state.current.answer].concat(state.current.aliases || []));
     var isCorrect = accepted.indexOf(normalize(answer)) >= 0;
 
     if (isCorrect) {
@@ -465,7 +554,13 @@
   }
 
   function loadHome() {
-    if (!state.sheets.length && Array.isArray(config.FALLBACK_SHEETS) && config.FALLBACK_SHEETS.length) {
+    var cachedSheets = readCache('sheets');
+    var cachedStats = readCache('stats', '', 10 * 60 * 1000);
+    if (!state.sheets.length && cachedSheets && cachedSheets.length) {
+      state.sheets = cachedSheets;
+      renderSheets();
+      setStatus('Sẵn sàng', 'ok');
+    } else if (!state.sheets.length && Array.isArray(config.FALLBACK_SHEETS) && config.FALLBACK_SHEETS.length) {
       state.sheets = config.FALLBACK_SHEETS.slice();
       renderSheets();
       setStatus('Sẵn sàng', 'ok');
@@ -473,12 +568,15 @@
       setStatus('Đang tải dữ liệu', 'pending');
     }
 
-    api({ action: 'bootstrap' }, 240000)
+    if (cachedStats) renderStats(cachedStats);
+
+    api({ action: 'sheets' }, 60000)
       .then(function (payload) {
         state.sheets = payload.sheets || [];
+        writeCache('sheets', '', state.sheets);
         renderSheets();
-        renderStats(payload.stats || {});
         setStatus('Đã kết nối', 'ok');
+        scheduleBackgroundLoad();
       })
       .catch(function (err) {
         if (!state.sheets.length) {
@@ -487,8 +585,28 @@
         } else {
           setStatus('Dùng danh sách đã lưu', 'ok');
         }
-        renderStats({ leaderboard: [] });
+        if (!cachedStats) renderStats({ leaderboard: [] });
       });
+  }
+
+  function scheduleBackgroundLoad() {
+    window.clearTimeout(state.backgroundTimer);
+    state.backgroundTimer = window.setTimeout(function () {
+      api({ action: 'stats' }, 60000)
+        .then(function (payload) {
+          var stats = payload.stats || {};
+          writeCache('stats', '', stats);
+          renderStats(stats);
+        })
+        .catch(function () {
+          // Tương thích với bản Apps Script cũ trong lúc chưa tạo deployment mới.
+          return api({ action: 'bootstrap' }, 120000).then(function (payload) {
+            var stats = payload.stats || {};
+            writeCache('stats', '', stats);
+            renderStats(stats);
+          }).catch(function () {});
+        });
+    }, state.activeSheet ? 2500 : 500);
   }
 
   function escapeHtml(value) {
@@ -509,4 +627,10 @@
   loadPlayerName();
   updateScoreboard();
   loadHome();
+
+  window.FLASHCARD_TEST = {
+    normalize: normalize,
+    withoutOptionalAbbreviation: withoutOptionalAbbreviation,
+    acceptedAnswerVariants: acceptedAnswerVariants
+  };
 })();
