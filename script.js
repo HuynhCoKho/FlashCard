@@ -426,10 +426,20 @@
   }
 
   function speak(text) {
+    var candidates = guessLanguageCandidates(state.activeSheet, text);
+    var nativePlugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.NativeTextToSpeech;
+    if (nativePlugin && typeof nativePlugin.speak === 'function') {
+      nativePlugin.speak({ text: text, lang: candidates[0], rate: 0.92 })
+        .catch(function () { speakInBrowser(text, candidates); });
+      return;
+    }
+    speakInBrowser(text, candidates);
+  }
+
+  function speakInBrowser(text, candidates) {
     if (!('speechSynthesis' in window)) return;
     try {
       window.speechSynthesis.cancel();
-      var candidates = guessLanguageCandidates(state.activeSheet, text);
       speakWithVoices(text, candidates, 0);
     } catch (err) {}
   }
