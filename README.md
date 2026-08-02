@@ -92,6 +92,7 @@ Tài sản Google Play nằm trong `play-store/`, gồm icon 512×512, feature g
 - Phần viết tắt ở cuối đáp án là tùy chọn: với `Generative AI (GenAI)`, nhập `Generative AI` vẫn được tính đúng.
 - Đúng: cộng điểm và trình duyệt đọc to từ vừa nhập đúng.
 - Bản Android dùng Text-to-Speech native để phát âm ổn định qua nhiều câu liên tiếp.
+- Khi xoay ngang, panel bộ từ và panel trò chơi cuộn độc lập để không mất nội dung.
 - Sai: trừ điểm, thẻ đỏ và rung nhẹ.
 - Từ xuất hiện ngẫu nhiên và hạn chế lặp lại quá sớm.
 - Bảng xếp hạng 10 người chơi có điểm cao nhất.

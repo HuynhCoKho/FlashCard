@@ -69,6 +69,31 @@ button {
   padding: 18px;
 }
 
+.side-panel,
+.game-panel {
+  scrollbar-color: rgba(23, 111, 104, 0.7) rgba(217, 226, 234, 0.55);
+  scrollbar-width: thin;
+}
+
+.side-panel::-webkit-scrollbar,
+.game-panel::-webkit-scrollbar {
+  width: 9px;
+}
+
+.side-panel::-webkit-scrollbar-track,
+.game-panel::-webkit-scrollbar-track {
+  background: rgba(217, 226, 234, 0.55);
+  border-radius: 999px;
+}
+
+.side-panel::-webkit-scrollbar-thumb,
+.game-panel::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(23, 111, 104, 0.72);
+  background-clip: padding-box;
+}
+
 .brand h1,
 .game-header h2,
 .panel-section h2 {
@@ -317,7 +342,10 @@ button {
 .game-panel {
   display: grid;
   grid-template-rows: auto auto minmax(260px, 1fr) auto auto;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .game-header {
