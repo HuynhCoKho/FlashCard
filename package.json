@@ -5,8 +5,8 @@
   "scripts": {
     "sync:web": "node scripts/sync-web.mjs",
     "android:sync": "npm run sync:web && cap sync android",
-    "android:build": "npm run android:sync && cd android && gradlew.bat assembleDebug",
-    "android:bundle": "npm run android:sync && cd android && gradlew.bat bundleRelease",
+    "android:build": "npm run android:sync && cd android && .\\gradlew.bat assembleDebug",
+    "android:bundle": "npm run android:sync && cd android && .\\gradlew.bat bundleRelease",
     "android:build:unix": "npm run android:sync && cd android && ./gradlew assembleDebug",
     "android:bundle:unix": "npm run android:sync && cd android && ./gradlew bundleRelease"
   },
