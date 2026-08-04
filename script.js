@@ -15,6 +15,7 @@
       board: document.getElementById('pageBoard')
     },
     playerName: document.getElementById('playerName'),
+    exitButton: document.getElementById('exitButton'),
     playerAvatar: document.getElementById('playerAvatar'),
     refreshButton: document.getElementById('refreshButton'),
     sheetList: document.getElementById('sheetList'),
@@ -44,8 +45,7 @@
       kicker: face.querySelector('.card-kicker'),
       vietnamese: face.querySelector('.vietnamese-text'),
       pronunciation: face.querySelector('.pronunciation-text'),
-      note: face.querySelector('.note-text'),
-      speak: face.querySelector('.speak-3d')
+      note: face.querySelector('.note-text')
     };
   });
 
@@ -555,7 +555,6 @@
     } else {
       face.note.hidden = true;
     }
-    face.speak.hidden = !content.canSpeak;
   }
 
   function setCardState(mode) {
@@ -572,8 +571,7 @@
       kicker: 'Dịch sang ngoại ngữ',
       vi: word.vi,
       pronunciation: word.pronunciation,
-      note: word.note,
-      canSpeak: true
+      note: word.note
     });
     target.root.classList.remove('is-correct', 'is-wrong');
     state.faceIndex = 1 - state.faceIndex;
@@ -851,21 +849,19 @@
     });
   });
 
-  faces.forEach(function (face) {
-    face.speak.addEventListener('click', function () {
-      if (!state.current) return;
-      speak(state.current.vi, ['vi-VN']);
+  // Nút thoát chỉ hiện trong ứng dụng Android, trang web không có gì để đóng.
+  var appControl = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AppControl;
+  if (appControl && typeof appControl.exitApp === 'function') {
+    els.exitButton.hidden = false;
+    els.exitButton.addEventListener('click', function () {
+      appControl.exitApp().catch(function () {});
     });
-  });
+  }
 
   els.refreshButton.addEventListener('click', loadHome);
   els.playerName.addEventListener('input', updatePlayerAvatar);
   els.playerName.addEventListener('change', savePlayerName);
   els.playerName.addEventListener('blur', savePlayerName);
-
-  faces.forEach(function (face) {
-    face.speak.hidden = true;
-  });
 
   loadPlayerName();
   updateScoreboard();

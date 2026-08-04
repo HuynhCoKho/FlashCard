@@ -15,6 +15,10 @@
     <main class="app-shell">
       <!-- ================= TRANG 1: CHỌN BỘ TỪ ================= -->
       <section id="pageHome" class="page page-home" aria-label="Chọn bộ từ">
+        <div class="page-topbar home-topbar">
+          <button id="exitButton" class="nav-3d" type="button" aria-label="Thoát ứng dụng" hidden>✕</button>
+        </div>
+
         <header class="home-brand">
           <h1 class="logo-3d">FlashCard</h1>
           <p class="author-chip">Tác giả: Huỳnh Cỏ Khô</p>
@@ -100,14 +104,12 @@
         <div id="cardShell" class="card-shell">
           <article id="flashcard" class="flashcard" aria-live="polite">
             <div class="card-face" data-face="0">
-              <button class="speak-3d" type="button" data-speak="1" aria-label="Nghe nghĩa tiếng Việt">🔊</button>
               <p class="card-kicker">Chọn bộ từ để bắt đầu</p>
               <div class="vietnamese-text">Sẵn sàng</div>
               <p class="pronunciation-text" hidden></p>
               <p class="note-text" hidden></p>
             </div>
             <div class="card-face card-face-back" data-face="1">
-              <button class="speak-3d" type="button" data-speak="1" aria-label="Nghe nghĩa tiếng Việt">🔊</button>
               <p class="card-kicker">Dịch sang ngoại ngữ</p>
               <div class="vietnamese-text">…</div>
               <p class="pronunciation-text" hidden></p>

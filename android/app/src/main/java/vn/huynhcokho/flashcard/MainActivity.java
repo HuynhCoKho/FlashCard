@@ -7,6 +7,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(NativeTextToSpeechPlugin.class);
+        registerPlugin(AppControlPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

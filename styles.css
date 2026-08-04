@@ -146,7 +146,6 @@ h2 {
 .cta-3d,
 .nav-3d,
 .icon-3d,
-.speak-3d,
 .board-button,
 .sheet-button {
   border: 0;
@@ -156,7 +155,6 @@ h2 {
 .cta-3d:active,
 .nav-3d:active,
 .icon-3d:active,
-.speak-3d:active,
 .board-button:active,
 .sheet-button:active {
   transform: translateY(4px);
@@ -231,6 +229,10 @@ h2 {
   align-items: center;
   gap: 14px;
   padding-right: 68px;
+}
+
+.home-topbar {
+  min-height: 46px;
 }
 
 .page-board .page-topbar {
@@ -717,23 +719,8 @@ h2 {
   box-shadow: 0 10px 0 rgba(214, 59, 59, 0.22), var(--lift-lg), var(--gloss);
 }
 
-.speak-3d {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 16px;
-  background: linear-gradient(180deg, #ffffff, #eef4ef);
-  font-size: 20px;
-  box-shadow: 0 5px 0 rgba(13, 70, 53, 0.14), var(--lift), var(--gloss);
-}
-
 .card-kicker {
   margin: 0;
-  padding: 0 52px;
   color: var(--green-700);
   font-size: 13px;
   font-weight: 800;
