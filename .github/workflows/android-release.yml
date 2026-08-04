@@ -29,7 +29,8 @@ jobs:
       - name: Cài Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # Capacitor CLI 8 yêu cầu Node >= 22.
+          node-version: '22'
 
       - name: Cài Java 21
         uses: actions/setup-java@v4
