@@ -9,32 +9,50 @@
   var cacheMaxAge = 24 * 60 * 60 * 1000;
 
   var els = {
+    pages: {
+      home: document.getElementById('pageHome'),
+      game: document.getElementById('pageGame'),
+      board: document.getElementById('pageBoard')
+    },
     playerName: document.getElementById('playerName'),
+    playerAvatar: document.getElementById('playerAvatar'),
     refreshButton: document.getElementById('refreshButton'),
     sheetList: document.getElementById('sheetList'),
+    startButton: document.getElementById('startButton'),
+    connectionStatus: document.getElementById('connectionStatus'),
+    leaderboardButton: document.getElementById('leaderboardButton'),
     totalPlayers: document.getElementById('totalPlayers'),
     totalPlays: document.getElementById('totalPlays'),
     leaderboard: document.getElementById('leaderboard'),
-    connectionStatus: document.getElementById('connectionStatus'),
     activeSheetLabel: document.getElementById('activeSheetLabel'),
     gameTitle: document.getElementById('gameTitle'),
     scoreValue: document.getElementById('scoreValue'),
     correctCount: document.getElementById('correctCount'),
     wrongCount: document.getElementById('wrongCount'),
     streakCount: document.getElementById('streakCount'),
+    cardShell: document.getElementById('cardShell'),
     flashcard: document.getElementById('flashcard'),
-    cardHint: document.getElementById('cardHint'),
-    vietnameseText: document.getElementById('vietnameseText'),
-    pronunciationText: document.getElementById('pronunciationText'),
-    noteText: document.getElementById('noteText'),
     answerForm: document.getElementById('answerForm'),
     answerInput: document.getElementById('answerInput'),
     submitButton: document.getElementById('submitButton'),
     feedback: document.getElementById('feedback')
   };
 
+  var faces = Array.prototype.slice.call(els.flashcard.querySelectorAll('.card-face')).map(function (face) {
+    return {
+      root: face,
+      kicker: face.querySelector('.card-kicker'),
+      vietnamese: face.querySelector('.vietnamese-text'),
+      pronunciation: face.querySelector('.pronunciation-text'),
+      note: face.querySelector('.note-text'),
+      speak: face.querySelector('.speak-3d')
+    };
+  });
+
   var state = {
+    page: 'home',
     sheets: [],
+    pendingSheet: '',
     activeSheet: '',
     words: [],
     current: null,
@@ -47,8 +65,78 @@
     requestId: 0,
     bestSubmittedScore: 0,
     selectionToken: 0,
-    backgroundTimer: 0
+    backgroundTimer: 0,
+    faceIndex: 0
   };
+
+  var SHEET_ICON_RULES = [
+    { keys: ['starter', 'beginner', 'co ban', 'vo long'], icon: '⭐' },
+    { keys: ['mover'], icon: '🚀' },
+    { keys: ['flyer'], icon: '✈️' },
+    { keys: ['sat'], icon: '🎓' },
+    { keys: ['ielts'], icon: '📖' },
+    { keys: ['toeic', 'toefl'], icon: '🧭' },
+    { keys: ['bank', 'ngan hang', 'tai chinh'], icon: '🏛️' },
+    { keys: ['ai', 'tri tue nhan tao', 'machine learning'], icon: '🤖' },
+    { keys: ['english', 'tieng anh'], icon: '🔤' },
+    { keys: ['japanese', 'tieng nhat', 'nhat'], icon: '🗾' },
+    { keys: ['korean', 'tieng han', 'han quoc'], icon: '🇰🇷' },
+    { keys: ['chinese', 'tieng trung', 'trung quoc', 'hoa'], icon: '🀄' },
+    { keys: ['thai', 'thai lan'], icon: '🐘' },
+    { keys: ['deutsch', 'german', 'tieng duc'], icon: '🥨' },
+    { keys: ['french', 'phap'], icon: '🥐' },
+    { keys: ['medical', 'y khoa', 'suc khoe'], icon: '🩺' },
+    { keys: ['business', 'kinh doanh', 'thuong mai'], icon: '💼' },
+    { keys: ['travel', 'du lich'], icon: '🧳' },
+    { keys: ['kid', 'tre em', 'thieu nhi'], icon: '🧸' }
+  ];
+
+  var FALLBACK_ICONS = ['📘', '🌟', '🍀', '🎯', '🧩', '🎨', '🔔', '🌈', '🧠', '🦉', '🐳', '🚂'];
+  var AVATARS = ['👦', '👧', '🧒', '👨‍🎓', '👩‍🎓', '🧑', '👨‍🏫', '👩‍🏫', '🧑‍🎓', '👱‍♀️', '👱', '🧑‍🏫'];
+  var RANK_BADGES = ['🥇', '🥈', '🥉'];
+
+  function hashOf(value) {
+    var text = String(value || '');
+    var hash = 0;
+    for (var i = 0; i < text.length; i += 1) {
+      hash = (hash * 31 + text.charCodeAt(i)) % 100000;
+    }
+    return hash;
+  }
+
+  /** Khớp theo từ trong tên sheet: "Starters" vẫn nhận icon của "starter". */
+  function matchesKey(words, key) {
+    var keyWords = key.split(' ');
+    for (var i = 0; i + keyWords.length <= words.length; i += 1) {
+      var hit = true;
+      for (var j = 0; j < keyWords.length; j += 1) {
+        var word = words[i + j];
+        var part = keyWords[j];
+        var last = j === keyWords.length - 1;
+        if (word !== part && !(last && part.length >= 4 && word.indexOf(part) === 0)) {
+          hit = false;
+          break;
+        }
+      }
+      if (hit) return true;
+    }
+    return false;
+  }
+
+  function sheetIcon(name) {
+    var normalized = normalize(name);
+    var words = normalized.split(' ').filter(Boolean);
+    for (var i = 0; i < SHEET_ICON_RULES.length; i += 1) {
+      for (var j = 0; j < SHEET_ICON_RULES[i].keys.length; j += 1) {
+        if (matchesKey(words, SHEET_ICON_RULES[i].keys[j])) return SHEET_ICON_RULES[i].icon;
+      }
+    }
+    return FALLBACK_ICONS[hashOf(normalized) % FALLBACK_ICONS.length];
+  }
+
+  function avatarFor(name) {
+    return AVATARS[hashOf(normalize(name)) % AVATARS.length];
+  }
 
   function cacheKey(type, name) {
     return 'flashcard-' + cacheVersion + '-' + type + (name ? '-' + encodeURIComponent(name) : '');
@@ -82,7 +170,7 @@
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/\u0111/g, 'd')
-      .replace(/[’']/g, '');
+      .replace(/[\u2019']/g, '');
 
     try {
       return text.replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
@@ -130,12 +218,32 @@
     try {
       localStorage.setItem('flashcardPlayerName', getPlayerName());
     } catch (err) {}
+    updatePlayerAvatar();
   }
 
   function loadPlayerName() {
     try {
       els.playerName.value = localStorage.getItem('flashcardPlayerName') || '';
     } catch (err) {}
+    updatePlayerAvatar();
+  }
+
+  function updatePlayerAvatar() {
+    var typed = compactSpaces(els.playerName.value);
+    els.playerAvatar.textContent = typed ? avatarFor(typed) : '🤖';
+  }
+
+  function showPage(name) {
+    if (!els.pages[name]) return;
+    state.page = name;
+    document.body.dataset.page = name;
+    Object.keys(els.pages).forEach(function (key) {
+      els.pages[key].hidden = key !== name;
+    });
+    try {
+      window.scrollTo(0, 0);
+    } catch (err) {}
+    if (name === 'game' && !els.answerInput.disabled) els.answerInput.focus();
   }
 
   function api(params, timeoutMs) {
@@ -185,6 +293,7 @@
       empty.className = 'empty-state';
       empty.textContent = 'Chưa có sheet từ vựng.';
       els.sheetList.appendChild(empty);
+      updateStartButton();
       return;
     }
 
@@ -192,13 +301,40 @@
       var button = document.createElement('button');
       button.type = 'button';
       button.className = 'sheet-button';
-      button.dataset.active = sheet.name === state.activeSheet ? 'true' : 'false';
-      button.innerHTML = '<span>' + escapeHtml(sheet.name) + '</span><strong>' + Number(sheet.count || 0) + '</strong>';
+      button.dataset.active = sheet.name === state.pendingSheet ? 'true' : 'false';
+
+      var icon = document.createElement('span');
+      icon.className = 'sheet-icon';
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = sheetIcon(sheet.name);
+
+      var label = document.createElement('span');
+      label.className = 'sheet-name';
+      label.textContent = sheet.name;
+
+      var count = document.createElement('span');
+      count.className = 'sheet-count';
+      count.textContent = Number(sheet.count || 0);
+
+      button.appendChild(icon);
+      button.appendChild(label);
+      button.appendChild(count);
       button.addEventListener('click', function () {
-        selectSheet(sheet.name);
+        pickSheet(sheet.name);
       });
       els.sheetList.appendChild(button);
     });
+
+    updateStartButton();
+  }
+
+  function pickSheet(sheetName) {
+    state.pendingSheet = sheetName;
+    renderSheets();
+  }
+
+  function updateStartButton() {
+    els.startButton.disabled = !state.pendingSheet;
   }
 
   function renderStats(stats) {
@@ -217,13 +353,32 @@
       els.leaderboard.appendChild(empty);
       return;
     }
-    items.slice(0, 10).forEach(function (item) {
+
+    items.slice(0, 10).forEach(function (item, index) {
+      var name = item.player || fallbackPlayerName;
       var row = document.createElement('li');
-      var name = document.createElement('span');
+
+      var rank = document.createElement('span');
+      rank.className = 'rank-badge';
+      rank.dataset.top = index < 3 ? 'true' : 'false';
+      rank.textContent = index < 3 ? RANK_BADGES[index] : String(index + 1);
+
+      var avatar = document.createElement('span');
+      avatar.className = 'player-avatar';
+      avatar.setAttribute('aria-hidden', 'true');
+      avatar.textContent = avatarFor(name);
+
+      var label = document.createElement('span');
+      label.className = 'player-name';
+      label.textContent = name;
+
       var score = document.createElement('strong');
-      name.textContent = item.player || fallbackPlayerName;
+      score.className = 'player-score';
       score.textContent = Number(item.score || 0).toLocaleString('vi-VN');
-      row.appendChild(name);
+
+      row.appendChild(rank);
+      row.appendChild(avatar);
+      row.appendChild(label);
       row.appendChild(score);
       els.leaderboard.appendChild(row);
     });
@@ -248,7 +403,7 @@
     state.streak = 0;
     state.bestSubmittedScore = 0;
     els.answerInput.value = '';
-    els.feedback.textContent = '';
+    setFeedback('', '');
     updateScoreboard();
   }
 
@@ -261,10 +416,11 @@
     setStatus('Đang tải ' + sheetName, 'pending');
     els.activeSheetLabel.textContent = sheetName;
     els.gameTitle.textContent = 'Bộ từ ' + sheetName;
-    els.cardHint.textContent = 'Đang chuẩn bị thẻ';
-    els.vietnameseText.textContent = '...';
-    els.pronunciationText.hidden = true;
-    els.noteText.hidden = true;
+    writeFace(visibleFace(), {
+      kicker: 'Đang chuẩn bị thẻ',
+      vi: '…'
+    });
+    setCardState('');
     els.answerInput.disabled = true;
     els.submitButton.disabled = true;
 
@@ -294,8 +450,10 @@
           return;
         }
         setStatus('Cần kiểm tra dữ liệu', 'error');
-        els.cardHint.textContent = 'Không tải được bộ từ';
-        els.vietnameseText.textContent = err.message;
+        writeFace(visibleFace(), {
+          kicker: 'Không tải được bộ từ',
+          vi: err.message
+        });
       });
   }
 
@@ -374,24 +532,59 @@
       });
   }
 
+  function visibleFace() {
+    return faces[state.faceIndex];
+  }
+
+  function hiddenFace() {
+    return faces[1 - state.faceIndex];
+  }
+
+  function writeFace(face, content) {
+    face.kicker.textContent = content.kicker || 'Dịch sang ngoại ngữ';
+    face.vietnamese.textContent = content.vi || '';
+    if (content.pronunciation) {
+      face.pronunciation.textContent = content.pronunciation;
+      face.pronunciation.hidden = false;
+    } else {
+      face.pronunciation.hidden = true;
+    }
+    if (content.note) {
+      face.note.textContent = '(' + content.note + ')';
+      face.note.hidden = false;
+    } else {
+      face.note.hidden = true;
+    }
+    face.speak.hidden = !content.canSpeak;
+  }
+
+  function setCardState(mode) {
+    faces.forEach(function (face) {
+      face.root.classList.remove('is-correct', 'is-wrong');
+    });
+    if (mode) visibleFace().root.classList.add(mode);
+  }
+
+  /** Thẻ lật sang mặt kia mỗi khi chuyển từ mới, đúng kiểu flashcard. */
   function renderCard(word) {
-    els.flashcard.classList.remove('is-wrong', 'is-correct');
-    els.cardHint.textContent = 'Dịch sang ngoại ngữ';
-    els.vietnameseText.textContent = word.vi;
-    if (word.pronunciation) {
-      els.pronunciationText.textContent = word.pronunciation;
-      els.pronunciationText.hidden = false;
-    } else {
-      els.pronunciationText.hidden = true;
-    }
-    if (word.note) {
-      els.noteText.textContent = '(' + word.note + ')';
-      els.noteText.hidden = false;
-    } else {
-      els.noteText.hidden = true;
-    }
+    var target = hiddenFace();
+    writeFace(target, {
+      kicker: 'Dịch sang ngoại ngữ',
+      vi: word.vi,
+      pronunciation: word.pronunciation,
+      note: word.note,
+      canSpeak: true
+    });
+    target.root.classList.remove('is-correct', 'is-wrong');
+    state.faceIndex = 1 - state.faceIndex;
+    els.flashcard.classList.toggle('is-flipped', state.faceIndex === 1);
     els.answerInput.value = '';
-    els.answerInput.focus();
+    if (state.page === 'game') els.answerInput.focus();
+  }
+
+  function setFeedback(text, mode) {
+    els.feedback.textContent = text;
+    els.feedback.dataset.mode = mode || '';
   }
 
   function submitAnswer() {
@@ -406,8 +599,8 @@
       state.score += pointsCorrect;
       state.correct += 1;
       state.streak += 1;
-      els.feedback.textContent = 'Đúng: ' + state.current.answer;
-      els.flashcard.classList.add('is-correct');
+      setFeedback('Đúng: ' + state.current.answer, 'correct');
+      setCardState('is-correct');
       speak(answer || state.current.answer);
       updateScoreboard();
       submitScoreIfNeeded();
@@ -416,17 +609,20 @@
       state.score += pointsWrong;
       state.wrong += 1;
       state.streak = 0;
-      els.feedback.textContent = 'Sai rồi. Đáp án đúng: ' + state.current.answer;
-      els.flashcard.classList.remove('is-wrong');
-      void els.flashcard.offsetWidth;
-      els.flashcard.classList.add('is-wrong');
+      setFeedback('Sai rồi. Đáp án đúng: ' + state.current.answer, 'wrong');
+      setCardState('is-wrong');
+      els.cardShell.classList.remove('is-shaking');
+      void els.cardShell.offsetWidth;
+      els.cardShell.classList.add('is-shaking');
       updateScoreboard();
       submitScoreIfNeeded();
     }
   }
 
-  function speak(text) {
-    var candidates = guessLanguageCandidates(state.activeSheet, text);
+  function speak(text, forcedLangs) {
+    var candidates = forcedLangs && forcedLangs.length
+      ? forcedLangs
+      : guessLanguageCandidates(state.activeSheet, text);
     var nativePlugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.NativeTextToSpeech;
     if (nativePlugin && typeof nativePlugin.speak === 'function') {
       nativePlugin.speak({ text: text, lang: candidates[0], rate: 0.92 })
@@ -546,7 +742,9 @@
       wrong: state.wrong
     }, 12000)
       .then(function (payload) {
-        renderStats(payload.stats || {});
+        var stats = payload.stats || {};
+        writeCache('stats', '', stats);
+        renderStats(stats);
       })
       .catch(function () {});
   }
@@ -558,7 +756,9 @@
       sheet: state.activeSheet
     }, 12000)
       .then(function (payload) {
-        renderStats(payload.stats || {});
+        var stats = payload.stats || {};
+        writeCache('stats', '', stats);
+        renderStats(stats);
       })
       .catch(function () {});
   }
@@ -584,13 +784,20 @@
       .then(function (payload) {
         state.sheets = payload.sheets || [];
         writeCache('sheets', '', state.sheets);
+        if (state.pendingSheet && !state.sheets.some(function (sheet) { return sheet.name === state.pendingSheet; })) {
+          state.pendingSheet = '';
+        }
         renderSheets();
         setStatus('Đã kết nối', 'ok');
         scheduleBackgroundLoad();
       })
       .catch(function (err) {
         if (!state.sheets.length) {
-          els.sheetList.innerHTML = '<p class="empty-state">' + escapeHtml(err.message) + '</p>';
+          els.sheetList.textContent = '';
+          var message = document.createElement('p');
+          message.className = 'empty-state';
+          message.textContent = err.message;
+          els.sheetList.appendChild(message);
           setStatus('Cần tải lại dữ liệu', 'error');
         } else {
           setStatus('Dùng danh sách đã lưu', 'ok');
@@ -599,30 +806,26 @@
       });
   }
 
-  function scheduleBackgroundLoad() {
-    window.clearTimeout(state.backgroundTimer);
-    state.backgroundTimer = window.setTimeout(function () {
-      api({ action: 'stats' }, 60000)
-        .then(function (payload) {
+  function refreshStats() {
+    return api({ action: 'stats' }, 60000)
+      .then(function (payload) {
+        var stats = payload.stats || {};
+        writeCache('stats', '', stats);
+        renderStats(stats);
+      })
+      .catch(function () {
+        // Tương thích với bản Apps Script cũ trong lúc chưa tạo deployment mới.
+        return api({ action: 'bootstrap' }, 120000).then(function (payload) {
           var stats = payload.stats || {};
           writeCache('stats', '', stats);
           renderStats(stats);
-        })
-        .catch(function () {
-          // Tương thích với bản Apps Script cũ trong lúc chưa tạo deployment mới.
-          return api({ action: 'bootstrap' }, 120000).then(function (payload) {
-            var stats = payload.stats || {};
-            writeCache('stats', '', stats);
-            renderStats(stats);
-          }).catch(function () {});
-        });
-    }, state.activeSheet ? 2500 : 500);
+        }).catch(function () {});
+      });
   }
 
-  function escapeHtml(value) {
-    return String(value || '').replace(/[&<>"']/g, function (char) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char];
-    });
+  function scheduleBackgroundLoad() {
+    window.clearTimeout(state.backgroundTimer);
+    state.backgroundTimer = window.setTimeout(refreshStats, state.activeSheet ? 2500 : 500);
   }
 
   els.answerForm.addEventListener('submit', function (event) {
@@ -630,17 +833,50 @@
     submitAnswer();
   });
 
+  els.startButton.addEventListener('click', function () {
+    if (!state.pendingSheet) return;
+    savePlayerName();
+    showPage('game');
+    selectSheet(state.pendingSheet);
+  });
+
+  els.leaderboardButton.addEventListener('click', function () {
+    showPage('board');
+    refreshStats();
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (button) {
+    button.addEventListener('click', function () {
+      showPage(button.dataset.nav);
+    });
+  });
+
+  faces.forEach(function (face) {
+    face.speak.addEventListener('click', function () {
+      if (!state.current) return;
+      speak(state.current.vi, ['vi-VN']);
+    });
+  });
+
   els.refreshButton.addEventListener('click', loadHome);
+  els.playerName.addEventListener('input', updatePlayerAvatar);
   els.playerName.addEventListener('change', savePlayerName);
   els.playerName.addEventListener('blur', savePlayerName);
 
+  faces.forEach(function (face) {
+    face.speak.hidden = true;
+  });
+
   loadPlayerName();
   updateScoreboard();
+  showPage('home');
   loadHome();
 
   window.FLASHCARD_TEST = {
     normalize: normalize,
     withoutOptionalAbbreviation: withoutOptionalAbbreviation,
-    acceptedAnswerVariants: acceptedAnswerVariants
+    acceptedAnswerVariants: acceptedAnswerVariants,
+    sheetIcon: sheetIcon,
+    avatarFor: avatarFor
   };
 })();
