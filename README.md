@@ -89,6 +89,13 @@ npm.cmd run android:build
 npm.cmd run android:bundle
 ```
 
+Trên Windows có thể chạy một lệnh duy nhất, file kết quả được đặt tên theo phiên
+bản và gom vào `dist\`:
+
+```text
+scripts\build-android.bat
+```
+
 Trên macOS/Linux dùng `npm run android:build:unix` và `npm run android:bundle:unix`.
 
 APK debug được tạo tại `android/app/build/outputs/apk/debug/app-debug.apk`.

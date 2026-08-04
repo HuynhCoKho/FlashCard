@@ -11,3 +11,4 @@ FlashCard.apk
 FlashCard-v*.apk
 .release/
 FlashCard-release.aab
+dist/
