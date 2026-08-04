@@ -20,13 +20,13 @@ public class NativeTextToSpeechPlugin extends Plugin {
 
     private static class PendingSpeech {
         final String text;
-        final String language;
+        final List<String> languages;
         final float rate;
         final PluginCall call;
 
-        PendingSpeech(String text, String language, float rate, PluginCall call) {
+        PendingSpeech(String text, List<String> languages, float rate, PluginCall call) {
             this.text = text;
-            this.language = language;
+            this.languages = languages;
             this.rate = rate;
             this.call = call;
         }
@@ -49,7 +49,6 @@ public class NativeTextToSpeechPlugin extends Plugin {
     @PluginMethod
     public void speak(PluginCall call) {
         String text = call.getString("text", "").trim();
-        String language = call.getString("lang", "en-US");
         Float requestedRate = call.getFloat("rate", 0.92f);
         float rate = requestedRate == null ? 0.92f : requestedRate;
 
@@ -58,7 +57,7 @@ public class NativeTextToSpeechPlugin extends Plugin {
             return;
         }
 
-        PendingSpeech item = new PendingSpeech(text, language, rate, call);
+        PendingSpeech item = new PendingSpeech(text, requestedLanguages(call), rate, call);
         getActivity().runOnUiThread(() -> {
             if (ready) speakNow(item);
             else if (initializationFailed) call.reject("Thiết bị không có bộ phát âm khả dụng.");
@@ -66,12 +65,41 @@ public class NativeTextToSpeechPlugin extends Plugin {
         });
     }
 
-    private void speakNow(PendingSpeech item) {
-        Locale locale = Locale.forLanguageTag(item.language);
-        int languageResult = textToSpeech.setLanguage(locale);
-        if (languageResult == TextToSpeech.LANG_MISSING_DATA || languageResult == TextToSpeech.LANG_NOT_SUPPORTED) {
-            textToSpeech.setLanguage(Locale.US);
+    /**
+     * Danh sách ngôn ngữ ứng viên, ưu tiên theo thứ tự trang web gửi xuống.
+     * Nhận cả "langs" dạng "zh-CN,zh-TW" lẫn "lang" đơn lẻ của bản cũ.
+     */
+    private List<String> requestedLanguages(PluginCall call) {
+        List<String> languages = new ArrayList<>();
+        String list = call.getString("langs", "");
+        for (String tag : list.split(",")) {
+            String trimmed = tag.trim();
+            if (!trimmed.isEmpty() && !languages.contains(trimmed)) languages.add(trimmed);
         }
+        String single = call.getString("lang", "").trim();
+        if (!single.isEmpty() && !languages.contains(single)) languages.add(single);
+        if (languages.isEmpty()) languages.add("en-US");
+        return languages;
+    }
+
+    private void speakNow(PendingSpeech item) {
+        // Thử lần lượt từng ngôn ngữ; thiết bị thiếu giọng thì báo lỗi thay vì đọc bằng giọng Anh.
+        Locale chosen = null;
+        for (String tag : item.languages) {
+            Locale locale = Locale.forLanguageTag(tag);
+            int availability = textToSpeech.isLanguageAvailable(locale);
+            if (availability >= TextToSpeech.LANG_AVAILABLE) {
+                chosen = locale;
+                break;
+            }
+        }
+
+        if (chosen == null) {
+            item.call.reject("Thiết bị chưa cài giọng đọc cho ngôn ngữ này.");
+            return;
+        }
+
+        textToSpeech.setLanguage(chosen);
         textToSpeech.setSpeechRate(Math.max(0.5f, Math.min(1.5f, item.rate)));
         int result = textToSpeech.speak(item.text, TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
         if (result == TextToSpeech.SUCCESS) {

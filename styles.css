@@ -788,6 +788,11 @@ h2 {
   text-align: center;
 }
 
+.feedback-hint {
+  color: var(--muted);
+  font-weight: 600;
+}
+
 .feedback[data-mode='wrong'] {
   color: var(--danger);
 }

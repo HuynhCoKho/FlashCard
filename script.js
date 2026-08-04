@@ -66,7 +66,8 @@
     bestSubmittedScore: 0,
     selectionToken: 0,
     backgroundTimer: 0,
-    faceIndex: 0
+    faceIndex: 0,
+    voiceWarned: false
   };
 
   var SHEET_ICON_RULES = [
@@ -599,7 +600,7 @@
       state.streak += 1;
       setFeedback('Đúng: ' + state.current.answer, 'correct');
       setCardState('is-correct');
-      speak(answer || state.current.answer);
+      speak(state.current.answer);
       updateScoreboard();
       submitScoreIfNeeded();
       window.setTimeout(nextCard, 520);
@@ -623,15 +624,28 @@
       : guessLanguageCandidates(state.activeSheet, text);
     var nativePlugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.NativeTextToSpeech;
     if (nativePlugin && typeof nativePlugin.speak === 'function') {
-      nativePlugin.speak({ text: text, lang: candidates[0], rate: 0.92 })
+      nativePlugin.speak({ text: text, lang: candidates[0], langs: candidates.join(','), rate: 0.92 })
         .catch(function () { speakInBrowser(text, candidates); });
       return;
     }
     speakInBrowser(text, candidates);
   }
 
+  /** Im lặng vì thiếu giọng đọc rất khó hiểu, nên nói rõ một lần cho người chơi biết. */
+  function warnMissingVoice() {
+    if (state.voiceWarned) return;
+    state.voiceWarned = true;
+    var hint = document.createElement('span');
+    hint.className = 'feedback-hint';
+    hint.textContent = ' — Thiết bị chưa cài giọng đọc cho ngôn ngữ này.';
+    els.feedback.appendChild(hint);
+  }
+
   function speakInBrowser(text, candidates) {
-    if (!('speechSynthesis' in window)) return;
+    if (!('speechSynthesis' in window)) {
+      warnMissingVoice();
+      return;
+    }
     try {
       window.speechSynthesis.cancel();
       speakWithVoices(text, candidates, 0);
@@ -652,6 +666,7 @@
       return;
     }
 
+    if (!voice) warnMissingVoice();
     window.speechSynthesis.speak(utterance);
   }
 
@@ -680,27 +695,54 @@
     return null;
   }
 
+  /**
+   * Chữ Hán dùng chung cho tiếng Trung, Nhật, Hàn nên chỉ nhìn mặt chữ là chưa đủ.
+   * Khi tên bộ từ chỉ ra một ngôn ngữ hợp với hệ chữ đang thấy thì tên bộ từ được ưu tiên.
+   */
   function guessLanguageCandidates(sheetName, text) {
-    var name = normalize(sheetName);
     var value = String(text || '');
-    var fromText = detectLanguageFromText(value);
-    if (fromText.length) return fromText;
-    var fromName = detectLanguageFromName(name);
+    var fromName = detectLanguageFromName(normalize(sheetName));
+    var script = detectScript(value);
+    var fromText = script ? script.langs : [];
+
+    if (fromName.length && script && script.bases.indexOf(baseLanguage(fromName[0])) >= 0) {
+      return dedupeLanguages(fromName.concat(fromText));
+    }
+    if (fromText.length) return dedupeLanguages(fromText.concat(fromName));
     if (fromName.length) return fromName;
     return /[a-z]/i.test(value) ? ['en-US'] : ['vi-VN'];
   }
 
-  function detectLanguageFromText(value) {
-    if (/[\u0e00-\u0e7f]/.test(value)) return ['th-TH'];
-    if (/[\u0900-\u097f]/.test(value)) return ['sa-IN', 'hi-IN'];
-    if (/[\u3040-\u30ff]/.test(value)) return ['ja-JP'];
-    if (/[\uac00-\ud7af]/.test(value)) return ['ko-KR'];
-    if (/[\u3400-\u9fff]/.test(value)) return ['zh-CN', 'zh-TW', 'zh-HK'];
-    if (/[\u0400-\u04ff]/.test(value)) return ['ru-RU'];
-    if (/[\u0370-\u03ff]/.test(value)) return ['el-GR'];
-    if (/[\u0590-\u05ff]/.test(value)) return ['he-IL'];
-    if (/[\u0600-\u06ff]/.test(value)) return ['ar-SA', 'ar'];
-    return [];
+  function baseLanguage(tag) {
+    return String(tag || '').split('-')[0].toLowerCase();
+  }
+
+  function dedupeLanguages(tags) {
+    var seen = {};
+    return tags.filter(function (tag) {
+      if (!tag || seen[tag]) return false;
+      seen[tag] = true;
+      return true;
+    });
+  }
+
+  function detectScript(value) {
+    var rules = [
+      { test: /[\u0e00-\u0e7f]/, langs: ['th-TH'], bases: ['th'] },
+      { test: /[\u0900-\u097f]/, langs: ['hi-IN', 'sa-IN'], bases: ['hi', 'sa', 'mr', 'ne'] },
+      { test: /[\u3040-\u30ff]/, langs: ['ja-JP'], bases: ['ja'] },
+      { test: /[\uac00-\ud7af]/, langs: ['ko-KR'], bases: ['ko'] },
+      { test: /[\u3400-\u9fff]/, langs: ['zh-CN', 'zh-TW', 'zh-HK'], bases: ['zh', 'ja', 'ko'] },
+      { test: /[\u0400-\u04ff]/, langs: ['ru-RU'], bases: ['ru', 'uk', 'bg', 'sr'] },
+      { test: /[\u0370-\u03ff]/, langs: ['el-GR'], bases: ['el'] },
+      { test: /[\u0590-\u05ff]/, langs: ['he-IL'], bases: ['he'] },
+      { test: /[\u0600-\u06ff]/, langs: ['ar-SA', 'ar'], bases: ['ar', 'fa', 'ur'] }
+    ];
+
+    for (var i = 0; i < rules.length; i += 1) {
+      if (rules[i].test.test(value)) return rules[i];
+    }
+    return null;
   }
 
   function detectLanguageFromName(name) {
@@ -872,6 +914,7 @@
     normalize: normalize,
     withoutOptionalAbbreviation: withoutOptionalAbbreviation,
     acceptedAnswerVariants: acceptedAnswerVariants,
+    guessLanguageCandidates: guessLanguageCandidates,
     sheetIcon: sheetIcon,
     avatarFor: avatarFor
   };
