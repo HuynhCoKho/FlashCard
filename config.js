@@ -6,10 +6,12 @@ window.FLASHCARD_CONFIG = {
   RECENT_WINDOW: 6,
   DEFAULT_PLAYER_NAME: 'Người học',
   FALLBACK_SHEETS: [
-    { name: 'English', count: 3310 },
-    { name: 'Chinese', count: 1 },
-    { name: 'Thai', count: 1 },
-    { name: 'Korean', count: 2 },
-    { name: 'Deutsche', count: 1 }
+    { name: 'Starters', count: 227 },
+    { name: 'Movers', count: 210 },
+    { name: 'Flyers', count: 325 },
+    { name: 'SAT', count: 747 },
+    { name: 'IELTS', count: 1986 },
+    { name: 'Bank', count: 1049 },
+    { name: 'AI', count: 986 }
   ]
 };

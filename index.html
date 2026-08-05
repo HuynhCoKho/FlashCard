@@ -2,102 +2,164 @@
 <html lang="vi">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#15654e">
     <title>FlashCard học ngoại ngữ</title>
-    <link rel="stylesheet" href="styles.css?v=20260802-landscape-scroll">
+    <link rel="stylesheet" href="styles.css?v=20260805-130">
   </head>
-  <body>
+  <body data-page="home">
+    <div class="app-stamp" aria-hidden="true">
+      <img src="assets/huynh-co-kho-stamp.png" alt="" loading="lazy" decoding="async">
+    </div>
+
     <main class="app-shell">
-      <aside class="side-panel" aria-label="Bảng điều khiển">
-        <header class="brand">
-          <p class="eyebrow">GitHub Pages</p>
-          <h1>FlashCard</h1>
-          <p class="author">Tác giả: Huỳnh Cỏ Khô</p>
-        </header>
-
-        <section class="panel-section">
-          <label class="field-label" for="playerName">Người chơi</label>
-          <input id="playerName" class="text-field" type="text" maxlength="28" autocomplete="name" placeholder="Tên của bạn">
-        </section>
-
-        <section class="panel-section">
-          <div class="section-row">
-            <h2>Chọn bộ từ</h2>
-            <button id="refreshButton" class="icon-button" type="button" title="Tải lại dữ liệu" aria-label="Tải lại dữ liệu">↻</button>
-          </div>
-          <div id="sheetList" class="sheet-list" aria-live="polite"></div>
-        </section>
-
-        <section class="panel-section stats-grid" aria-label="Thống kê">
-          <div class="stat-card">
-            <span id="totalPlayers">0</span>
-            <p>người chơi</p>
-          </div>
-          <div class="stat-card">
-            <span id="totalPlays">0</span>
-            <p>lượt chơi</p>
-          </div>
-        </section>
-
-        <section class="panel-section">
-          <h2>Top 10</h2>
-          <ol id="leaderboard" class="leaderboard"></ol>
-        </section>
-
-        <p id="connectionStatus" class="status-badge">Đang khởi động</p>
-        <a class="privacy-link" href="privacy.html">Chính sách quyền riêng tư</a>
-      </aside>
-
-      <section class="game-panel" aria-label="Khu vực học từ vựng">
-        <header class="game-header">
-          <div>
-            <p id="activeSheetLabel" class="eyebrow">Chưa chọn bộ từ</p>
-            <h2 id="gameTitle">Học từ vựng ngoại ngữ</h2>
-          </div>
-          <div class="score-pill">
-            <span>Điểm</span>
-            <strong id="scoreValue">0</strong>
-          </div>
-        </header>
-
-        <div class="progress-strip" aria-label="Tiến độ phiên chơi">
-          <span id="correctCount">0 đúng</span>
-          <span id="wrongCount">0 sai</span>
-          <span id="streakCount">Chuỗi 0</span>
+      <!-- ================= TRANG 1: CHỌN BỘ TỪ ================= -->
+      <section id="pageHome" class="page page-home" aria-label="Chọn bộ từ">
+        <div class="page-topbar home-topbar">
+          <button id="exitButton" class="nav-3d" type="button" aria-label="Thoát ứng dụng" hidden>✕</button>
         </div>
 
-        <article id="flashcard" class="flashcard" aria-live="polite">
-          <p id="cardHint" class="card-kicker">Chọn một sheet ở bên trái để bắt đầu</p>
-          <div id="vietnameseText" class="vietnamese-text">Sẵn sàng</div>
-          <p id="pronunciationText" class="pronunciation-text" hidden></p>
-          <p id="noteText" class="note-text" hidden></p>
-        </article>
+        <header class="home-brand">
+          <h1 class="logo-3d">FlashCard</h1>
+          <p class="author-chip">Tác giả: Huỳnh Cỏ Khô</p>
+        </header>
+
+        <div class="hero-deck" aria-hidden="true">
+          <span class="hero-card hero-card-3"></span>
+          <span class="hero-card hero-card-2"></span>
+          <span class="hero-card hero-card-1"><i>★</i></span>
+          <span class="hero-base"></span>
+        </div>
+
+        <div class="glass-panel">
+          <section class="panel-block">
+            <label class="block-title" for="playerName">Người chơi</label>
+            <div class="name-row">
+              <div class="input-3d">
+                <span class="input-icon" aria-hidden="true">👤</span>
+                <input id="playerName" type="text" maxlength="28" autocomplete="name" placeholder="Tên của bạn">
+              </div>
+              <div id="playerAvatar" class="avatar-badge" aria-hidden="true">🤖</div>
+            </div>
+          </section>
+
+          <section class="panel-block">
+            <div class="block-head">
+              <h2 class="block-title">Chọn bộ từ</h2>
+              <button id="refreshButton" class="icon-3d" type="button" title="Tải lại dữ liệu" aria-label="Tải lại dữ liệu">↻</button>
+            </div>
+            <div id="sheetList" class="sheet-grid" aria-live="polite"></div>
+          </section>
+
+          <button id="startButton" class="cta-3d" type="button" disabled>
+            <span>BẮT ĐẦU HỌC</span>
+            <i class="cta-arrow" aria-hidden="true">→</i>
+          </button>
+
+          <p id="connectionStatus" class="status-badge">Đang khởi động</p>
+          <a class="privacy-link" href="privacy.html">Chính sách quyền riêng tư</a>
+        </div>
+      </section>
+
+      <!-- ================= TRANG 2: MÀN CHƠI ================= -->
+      <section id="pageGame" class="page page-game" aria-label="Khu vực học từ vựng" hidden>
+        <div class="page-topbar">
+          <button class="nav-3d" type="button" data-nav="home" aria-label="Quay lại chọn bộ từ">←</button>
+        </div>
+
+        <header class="game-heading">
+          <p id="activeSheetLabel" class="eyebrow">Chưa chọn bộ từ</p>
+          <h2 id="gameTitle">Học từ vựng ngoại ngữ</h2>
+        </header>
+
+        <div class="game-top-row">
+          <div class="score-card">
+            <span class="score-orb" aria-hidden="true">★</span>
+            <span class="score-text">
+              <small>Điểm</small>
+              <strong id="scoreValue">0</strong>
+            </span>
+          </div>
+          <button id="leaderboardButton" class="board-button" type="button">
+            <span class="board-cup" aria-hidden="true">🏆</span>
+            <span>XEM BẢNG<br>XẾP HẠNG</span>
+          </button>
+        </div>
+
+        <div class="progress-strip">
+          <div class="progress-cell">
+            <span class="chip-icon chip-ok" aria-hidden="true">✓</span>
+            <p id="correctCount">0 đúng</p>
+          </div>
+          <div class="progress-cell">
+            <span class="chip-icon chip-bad" aria-hidden="true">✕</span>
+            <p id="wrongCount">0 sai</p>
+          </div>
+          <div class="progress-cell">
+            <span class="chip-icon chip-fire" aria-hidden="true">🔥</span>
+            <p id="streakCount">Chuỗi 0</p>
+          </div>
+        </div>
+
+        <div id="cardShell" class="card-shell">
+          <article id="flashcard" class="flashcard" aria-live="polite">
+            <div class="card-face" data-face="0">
+              <p class="card-kicker">Chọn bộ từ để bắt đầu</p>
+              <div class="vietnamese-text">Sẵn sàng</div>
+              <p class="pronunciation-text" hidden></p>
+              <p class="note-text" hidden></p>
+            </div>
+            <div class="card-face card-face-back" data-face="1">
+              <p class="card-kicker">Dịch sang ngoại ngữ</p>
+              <div class="vietnamese-text">…</div>
+              <p class="pronunciation-text" hidden></p>
+              <p class="note-text" hidden></p>
+            </div>
+          </article>
+        </div>
 
         <form id="answerForm" class="answer-form">
           <label class="field-label" for="answerInput">Nhập từ ngoại ngữ tương ứng</label>
-          <div class="answer-row">
-            <input id="answerInput" class="answer-input" type="text" autocomplete="off" spellcheck="false" disabled>
-            <button id="submitButton" type="submit" disabled>Enter</button>
+          <div class="input-3d input-3d-answer">
+            <input id="answerInput" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Nhập đáp án..." disabled>
           </div>
+          <button id="submitButton" class="cta-3d cta-enter" type="submit" disabled>
+            <span>Enter</span>
+            <i class="cta-arrow" aria-hidden="true">➤</i>
+          </button>
         </form>
 
         <div id="feedback" class="feedback" aria-live="polite"></div>
       </section>
+
+      <!-- ================= TRANG 3: BẢNG XẾP HẠNG ================= -->
+      <section id="pageBoard" class="page page-board" aria-label="Bảng xếp hạng" hidden>
+        <div class="page-topbar">
+          <button class="nav-3d" type="button" data-nav="game" aria-label="Quay lại màn chơi">←</button>
+          <h2 class="title-3d">BẢNG XẾP HẠNG</h2>
+        </div>
+
+        <div class="board-stats">
+          <div class="stat-tile stat-tile-green">
+            <span class="tile-icon" aria-hidden="true">🏆</span>
+            <strong id="totalPlayers">0</strong>
+            <p>người chơi</p>
+          </div>
+          <div class="stat-tile stat-tile-gold">
+            <span class="tile-icon" aria-hidden="true">⭐</span>
+            <strong id="totalPlays">0</strong>
+            <p>lượt chơi</p>
+          </div>
+        </div>
+
+        <div class="board-card">
+          <div class="board-tab"><span aria-hidden="true">👑</span> Top 10</div>
+          <ol id="leaderboard" class="leaderboard"></ol>
+        </div>
+      </section>
     </main>
 
-    <script src="config.js?v=20260802-fast-priority-load"></script>
-    <script src="script.js?v=20260802-native-tts"></script>
-  
-<!-- Huynh Co Kho ownership stamp -->
-<div class="hck-owner-stamp" aria-label="Hu?nh C? Kh?">
-  <img src="assets/huynh-co-kho-stamp.png" alt="Hu?nh C? Kh?" loading="lazy" decoding="async">
-</div>
-<style>
-  .hck-owner-stamp{position:fixed;right:14px;bottom:14px;width:72px;height:72px;z-index:2147483000;opacity:.9;pointer-events:none;user-select:none}
-  .hck-owner-stamp img{display:block;width:100%;height:100%;object-fit:contain;border-radius:8px;filter:drop-shadow(0 3px 8px rgba(0,0,0,.18))}
-  @media (max-width:640px){.hck-owner-stamp{right:10px;bottom:10px;width:56px;height:56px;opacity:.86}}
-  @media print{.hck-owner-stamp{display:none!important}}
-</style>
-<!-- /Huynh Co Kho ownership stamp -->
-</body>
+    <script src="config.js?v=20260805-130"></script>
+    <script src="script.js?v=20260805-130"></script>
+  </body>
 </html>
