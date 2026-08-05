@@ -148,6 +148,27 @@ var TTS_LANGUAGE_ALIASES = {
   'sa-in': 'hi-IN'
 };
 
+/**
+ * Chạy hàm này trong trình soạn thảo để tự kiểm tra giọng đọc máy chủ.
+ *
+ * Lần chạy đầu Google sẽ hỏi cấp quyền gọi ra Internet — phải bấm đồng ý, không có
+ * quyền đó thì UrlFetchApp bị chặn và ứng dụng câm dù khoá API hoàn toàn đúng.
+ */
+function kiemTraGiongDoc() {
+  // Gọi trần, cố ý không bọc try/catch. synthesizeSpeech_ bắt mọi lỗi nên nếu gọi
+  // qua nó, lỗi thiếu quyền bị nuốt mất và Google không bao giờ hiện hộp thoại
+  // xin cấp quyền. Dòng này để lỗi ném thẳng ra ngoài.
+  UrlFetchApp.fetch('https://texttospeech.googleapis.com/v1/voices', { muteHttpExceptions: true });
+
+  var result = synthesizeSpeech_('你好', 'cmn-CN');
+  if (result.audio) {
+    Logger.log('OK — nhận được ' + result.audio.length + ' ký tự âm thanh.');
+  } else {
+    Logger.log('HỎNG — ' + result.error);
+  }
+  return result.error || 'OK';
+}
+
 function speakPayload_(params) {
   var text = clean_(params.text);
   var language = ttsLanguage_(clean_(params.lang));
@@ -155,10 +176,10 @@ function speakPayload_(params) {
   if (!text) return { ok: false, error: 'Thiếu nội dung cần đọc.' };
   if (text.length > TTS_MAX_TEXT_LENGTH) return { ok: false, error: 'Nội dung quá dài.' };
 
-  var audio = synthesizeSpeech_(text, language);
-  if (!audio) return { ok: false, error: 'Máy chủ chưa tạo được âm thanh.' };
+  var result = synthesizeSpeech_(text, language);
+  if (!result.audio) return { ok: false, error: result.error || 'Máy chủ chưa tạo được âm thanh.' };
 
-  return { ok: true, mime: 'audio/mpeg', lang: language, audio: audio };
+  return { ok: true, mime: 'audio/mpeg', lang: language, audio: result.audio };
 }
 
 function ttsLanguage_(tag) {
@@ -168,6 +189,11 @@ function ttsLanguage_(tag) {
   return alias || value;
 }
 
+/**
+ * Trả về { audio, error }. Nói rõ lỗi thay vì im lặng, vì hỏng ở đây thì người dùng
+ * chỉ thấy ứng dụng câm và không ai đoán được là thiếu khoá, sai mã ngôn ngữ hay
+ * chưa bật API.
+ */
 function synthesizeSpeech_(text, language) {
   var cache = CacheService.getScriptCache();
   var digest = Utilities.base64EncodeWebSafe(
@@ -176,12 +202,14 @@ function synthesizeSpeech_(text, language) {
   var cacheKey = 'tts-v1-' + language + '-' + digest;
 
   var cached = cache.get(cacheKey);
-  if (cached) return cached;
+  if (cached) return { audio: cached, error: '' };
 
   var apiKey = PropertiesService.getScriptProperties().getProperty('TTS_API_KEY');
-  if (!apiKey) return '';
+  if (!apiKey) return { audio: '', error: 'Chưa đặt TTS_API_KEY trong Script Properties.' };
 
   var audio = '';
+  var error = '';
+
   try {
     var response = UrlFetchApp.fetch(
       'https://texttospeech.googleapis.com/v1/text:synthesize?key=' + encodeURIComponent(apiKey),
@@ -198,11 +226,17 @@ function synthesizeSpeech_(text, language) {
       }
     );
 
-    if (response.getResponseCode() === 200) {
-      audio = JSON.parse(response.getContentText()).audioContent || '';
+    var code = response.getResponseCode();
+    var body = response.getContentText();
+
+    if (code === 200) {
+      audio = JSON.parse(body).audioContent || '';
+      if (!audio) error = 'Cloud TTS trả về rỗng.';
+    } else {
+      error = 'Cloud TTS ' + code + ': ' + hideApiKey_(upstreamMessage_(body));
     }
   } catch (err) {
-    audio = '';
+    error = 'Không gọi được Cloud TTS: ' + hideApiKey_(errorMessage_(err));
   }
 
   if (audio && audio.length <= TTS_CACHE_MAX_BYTES) {
@@ -211,7 +245,20 @@ function synthesizeSpeech_(text, language) {
     } catch (err2) {}
   }
 
-  return audio;
+  return { audio: audio, error: error };
+}
+
+function upstreamMessage_(body) {
+  try {
+    var parsed = JSON.parse(body);
+    if (parsed && parsed.error && parsed.error.message) return parsed.error.message;
+  } catch (err) {}
+  return String(body || '').slice(0, 300);
+}
+
+/** Google không lộ khoá trong thông báo lỗi, nhưng chặn sẵn cho chắc. */
+function hideApiKey_(message) {
+  return String(message || '').replace(/AIza[0-9A-Za-z_\-]{10,}/g, '<khoá đã ẩn>');
 }
 
 function extractIpa_(data) {
