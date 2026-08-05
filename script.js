@@ -66,8 +66,7 @@
     bestSubmittedScore: 0,
     selectionToken: 0,
     backgroundTimer: 0,
-    faceIndex: 0,
-    voiceWarned: false
+    faceIndex: 0
   };
 
   var SHEET_ICON_RULES = [
@@ -91,6 +90,10 @@
     { keys: ['travel', 'du lich'], icon: '🧳' },
     { keys: ['kid', 'tre em', 'thieu nhi'], icon: '🧸' }
   ];
+
+  /** Giữ lại MP3 đã tải trong phiên để một từ chỉ hỏi máy chủ đúng một lần. */
+  var remoteAudio = {};
+  var currentAudio = null;
 
   var FALLBACK_ICONS = ['📘', '🌟', '🍀', '🎯', '🧩', '🎨', '🔔', '🌈', '🧠', '🦉', '🐳', '🚂'];
   var AVATARS = ['👦', '👧', '🧒', '👨‍🎓', '👩‍🎓', '🧑', '👨‍🏫', '👩‍🏫', '🧑‍🎓', '👱‍♀️', '👱', '🧑‍🏫'];
@@ -628,7 +631,9 @@
       // nó tự lùi về giọng mặc định và báo lại để ta nhắc người chơi cài thêm giọng.
       nativePlugin.speak({ text: text, lang: candidates[0], langs: candidates.join(','), rate: 0.92 })
         .then(function (result) {
-          if (result && result.fallback) warnMissingVoice();
+          // fallback nghĩa là máy không có giọng cho thứ tiếng này và vừa đọc bằng
+          // giọng mặc định, nghe không ra gì. Lấy bản đọc thật từ máy chủ.
+          if (result && result.fallback) speakFromServer(text, candidates[0], result.engine);
         })
         .catch(function () { speakInBrowser(text, candidates); });
       return;
@@ -636,19 +641,84 @@
     speakInBrowser(text, candidates);
   }
 
-  /** Im lặng vì thiếu giọng đọc rất khó hiểu, nên nói rõ một lần cho người chơi biết. */
-  function warnMissingVoice() {
-    if (state.voiceWarned) return;
-    state.voiceWarned = true;
+  /**
+   * Đường cứu cho những máy không có sẵn giọng: Huawei không có dịch vụ Google nên
+   * chỉ có bộ phát âm của hãng, nhiều máy giá rẻ cũng chỉ kèm vài thứ tiếng. Máy chủ
+   * đọc hộ rồi trả về MP3.
+   */
+  function speakFromServer(text, language, engine) {
+    var key = (language || '') + '|' + text;
+    if (remoteAudio[key]) {
+      playAudio(remoteAudio[key]);
+      return;
+    }
+
+    api({ action: 'speak', text: text, lang: language || 'en-US' }, 15000)
+      .then(function (payload) {
+        if (!payload.audio) throw new Error('Không có âm thanh.');
+        var source = 'data:' + (payload.mime || 'audio/mpeg') + ';base64,' + payload.audio;
+        remoteAudio[key] = source;
+        playAudio(source);
+      })
+      .catch(function () { warnMissingVoice(language, engine); });
+  }
+
+  function playAudio(source) {
+    try {
+      if (currentAudio) currentAudio.pause();
+      currentAudio = new Audio(source);
+      currentAudio.play().catch(function () {});
+    } catch (err) {}
+  }
+
+  /**
+   * Im lặng mà không nói gì thì người chơi tưởng app hỏng, nên báo rõ thiếu giọng nào,
+   * bộ phát âm nào đang chạy, và mở thẳng màn hình tải giọng của Android.
+   */
+  function warnMissingVoice(language, engine) {
     var hint = document.createElement('span');
     hint.className = 'feedback-hint';
-    hint.textContent = ' — Thiết bị chưa cài giọng đọc cho ngôn ngữ này.';
+    hint.textContent = ' — Máy chưa có giọng đọc' + (language ? ' ' + language : '') + '.';
+    if (engine) hint.textContent += ' Bộ phát âm: ' + engine + '.';
     els.feedback.appendChild(hint);
+
+    var tts = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.NativeTextToSpeech;
+    if (!tts || typeof tts.installVoices !== 'function') return;
+
+    var link = document.createElement('button');
+    link.type = 'button';
+    link.className = 'voice-install-link';
+    link.textContent = 'Cài giọng đọc';
+    link.addEventListener('click', function () {
+      // Máy nào không có màn hình cài giọng thì đổ thông tin ra ngay tại chỗ,
+      // im lặng nữa thì người dùng lại tưởng nút hỏng.
+      tts.installVoices().catch(function () { showVoiceReport(tts); });
+    });
+    els.feedback.appendChild(link);
+  }
+
+  function showVoiceReport(tts) {
+    if (!tts || typeof tts.diagnostics !== 'function') return;
+    tts.diagnostics()
+      .then(function (info) {
+        var lines = [
+          'Không mở được màn hình cài giọng.',
+          'Đang dùng: ' + info.engine,
+          'Có trong máy: ' + ((info.engines || []).join(', ') || 'không thấy bộ nào'),
+          'Số giọng: ' + (info.languages || []).length,
+          (info.languages || []).join(' ')
+        ];
+        var report = document.createElement('pre');
+        report.className = 'voice-report';
+        report.textContent = lines.join('\n');
+        els.feedback.appendChild(report);
+      })
+      .catch(function () {});
   }
 
   function speakInBrowser(text, candidates) {
     if (!('speechSynthesis' in window)) {
-      warnMissingVoice();
+      speakFromServer(text, candidates[0]);
       return;
     }
     try {
@@ -671,7 +741,11 @@
       return;
     }
 
-    if (!voice) warnMissingVoice();
+    if (!voice) {
+      // Đọc bằng giọng sai còn tệ hơn im lặng, nhờ thẳng máy chủ đọc hộ.
+      speakFromServer(text, candidates[0]);
+      return;
+    }
     window.speechSynthesis.speak(utterance);
   }
 

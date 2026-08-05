@@ -793,6 +793,33 @@ h2 {
   font-weight: 600;
 }
 
+.voice-report {
+  margin: 8px auto 0;
+  max-width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--cream-200);
+  color: var(--ink);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.voice-install-link {
+  margin-left: 6px;
+  padding: 2px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--green-700);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.86em;
+  cursor: pointer;
+}
+
 .feedback[data-mode='wrong'] {
   color: var(--danger);
 }

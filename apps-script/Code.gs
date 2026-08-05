@@ -57,6 +57,10 @@ function doGet(e) {
       return output_(callback, { ok: true, stats: getStats_(true) });
     }
 
+    if (action === 'speak') {
+      return output_(callback, speakPayload_(params));
+    }
+
     return output_(callback, { ok: false, error: 'Action không hợp lệ.' });
   } catch (err) {
     return output_(callback, { ok: false, error: errorMessage_(err) });
@@ -114,6 +118,100 @@ function lookupIpa_(value) {
   } catch (err2) {}
 
   return ipa;
+}
+
+/* ============================ ĐỌC TỪ TRÊN MÁY CHỦ ============================
+ *
+ * Máy Huawei không có dịch vụ Google nên chỉ có bộ phát âm của hãng, thiếu hẳn
+ * tiếng Trung, Thái, Đức, và khoá luôn phần tải thêm giọng. Nhiều máy giá rẻ khác
+ * cũng vậy. Khi máy không đọc được, ứng dụng hỏi xuống đây và nhận về file MP3.
+ *
+ * Cần đặt trước khoá API trong Tệp > Thuộc tính dự án > Thuộc tính tập lệnh:
+ *   TTS_API_KEY = khoá của Google Cloud Text-to-Speech
+ * ========================================================================== */
+
+var TTS_MAX_TEXT_LENGTH = 200;
+var TTS_CACHE_TTL_SECONDS = 21600;
+var TTS_CACHE_MAX_BYTES = 95000;
+
+/** Cloud TTS gọi tiếng Quan Thoại là cmn chứ không phải zh, gọi tiếng Ả Rập là ar-XA. */
+var TTS_LANGUAGE_ALIASES = {
+  'zh': 'cmn-CN',
+  'zh-cn': 'cmn-CN',
+  'zh-tw': 'cmn-TW',
+  'zh-hk': 'yue-HK',
+  'ar': 'ar-XA',
+  'ar-sa': 'ar-XA',
+  'iw': 'he-IL',
+  'iw-il': 'he-IL',
+  'sa': 'hi-IN',
+  'sa-in': 'hi-IN'
+};
+
+function speakPayload_(params) {
+  var text = clean_(params.text);
+  var language = ttsLanguage_(clean_(params.lang));
+
+  if (!text) return { ok: false, error: 'Thiếu nội dung cần đọc.' };
+  if (text.length > TTS_MAX_TEXT_LENGTH) return { ok: false, error: 'Nội dung quá dài.' };
+
+  var audio = synthesizeSpeech_(text, language);
+  if (!audio) return { ok: false, error: 'Máy chủ chưa tạo được âm thanh.' };
+
+  return { ok: true, mime: 'audio/mpeg', lang: language, audio: audio };
+}
+
+function ttsLanguage_(tag) {
+  var value = String(tag || '').trim();
+  if (!value) return 'en-US';
+  var alias = TTS_LANGUAGE_ALIASES[value.toLowerCase()];
+  return alias || value;
+}
+
+function synthesizeSpeech_(text, language) {
+  var cache = CacheService.getScriptCache();
+  var digest = Utilities.base64EncodeWebSafe(
+    Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, text, Utilities.Charset.UTF_8)
+  );
+  var cacheKey = 'tts-v1-' + language + '-' + digest;
+
+  var cached = cache.get(cacheKey);
+  if (cached) return cached;
+
+  var apiKey = PropertiesService.getScriptProperties().getProperty('TTS_API_KEY');
+  if (!apiKey) return '';
+
+  var audio = '';
+  try {
+    var response = UrlFetchApp.fetch(
+      'https://texttospeech.googleapis.com/v1/text:synthesize?key=' + encodeURIComponent(apiKey),
+      {
+        method: 'post',
+        contentType: 'application/json',
+        muteHttpExceptions: true,
+        payload: JSON.stringify({
+          input: { text: text },
+          // Không chỉ định tên giọng để Google tự chọn giọng Standard, nằm trong mức miễn phí.
+          voice: { languageCode: language },
+          audioConfig: { audioEncoding: 'MP3', speakingRate: 0.92 }
+        })
+      }
+    );
+
+    if (response.getResponseCode() === 200) {
+      audio = JSON.parse(response.getContentText()).audioContent || '';
+    }
+  } catch (err) {
+    audio = '';
+  }
+
+  if (audio && audio.length <= TTS_CACHE_MAX_BYTES) {
+    try {
+      cache.put(cacheKey, audio, TTS_CACHE_TTL_SECONDS);
+    } catch (err2) {}
+  }
+
+  return audio;
 }
 
 function extractIpa_(data) {
