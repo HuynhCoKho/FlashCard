@@ -83,30 +83,69 @@ public class NativeTextToSpeechPlugin extends Plugin {
     }
 
     private void speakNow(PendingSpeech item) {
-        // Thử lần lượt từng ngôn ngữ; thiết bị thiếu giọng thì báo lỗi thay vì đọc bằng giọng Anh.
-        Locale chosen = null;
-        for (String tag : item.languages) {
-            Locale locale = Locale.forLanguageTag(tag);
-            int availability = textToSpeech.isLanguageAvailable(locale);
-            if (availability >= TextToSpeech.LANG_AVAILABLE) {
-                chosen = locale;
-                break;
-            }
+        Locale chosen = chooseLocale(item.languages);
+        boolean usingFallback = chosen == null;
+        if (usingFallback) {
+            // Không tìm được giọng đúng thì vẫn đọc bằng giọng mặc định, im lặng hoàn toàn còn khó hiểu hơn.
+            chosen = Locale.US;
+            textToSpeech.setLanguage(chosen);
         }
 
-        if (chosen == null) {
-            item.call.reject("Thiết bị chưa cài giọng đọc cho ngôn ngữ này.");
-            return;
-        }
-
-        textToSpeech.setLanguage(chosen);
         textToSpeech.setSpeechRate(Math.max(0.5f, Math.min(1.5f, item.rate)));
         int result = textToSpeech.speak(item.text, TextToSpeech.QUEUE_FLUSH, null, UUID.randomUUID().toString());
         if (result == TextToSpeech.SUCCESS) {
-            item.call.resolve(new JSObject());
+            JSObject payload = new JSObject();
+            payload.put("language", chosen.toLanguageTag());
+            payload.put("fallback", usingFallback);
+            item.call.resolve(payload);
         } else {
             item.call.reject("Không phát âm được nội dung này.");
         }
+    }
+
+    /**
+     * Trả về locale đã được nạp vào bộ đọc, hoặc null nếu không ngôn ngữ nào dùng được.
+     *
+     * setLanguage() là phép thử đáng tin duy nhất: isLanguageAvailable() báo theo dữ liệu
+     * giọng đã tải sẵn trong máy nên trả về LANG_MISSING_DATA cho cả những thứ tiếng mà
+     * engine vẫn đọc được bằng giọng mạng.
+     */
+    private Locale chooseLocale(List<String> tags) {
+        for (String tag : tags) {
+            Locale locale = Locale.forLanguageTag(tag);
+            if (apply(locale)) return locale;
+        }
+
+        // Bỏ mã quốc gia: máy có thể chỉ khai báo "zh" chứ không có đúng "zh-CN".
+        for (String tag : tags) {
+            String base = Locale.forLanguageTag(tag).getLanguage();
+            if (base.isEmpty()) continue;
+
+            Locale loose = new Locale(base);
+            if (apply(loose)) return loose;
+
+            Locale installed = firstInstalledFor(base);
+            if (installed != null && apply(installed)) return installed;
+        }
+
+        return null;
+    }
+
+    private boolean apply(Locale locale) {
+        int result = textToSpeech.setLanguage(locale);
+        return result >= TextToSpeech.LANG_AVAILABLE;
+    }
+
+    /** Quét danh sách ngôn ngữ engine thực sự có, để bắt các biến thể như cmn-Hans-CN. */
+    private Locale firstInstalledFor(String base) {
+        try {
+            for (Locale locale : textToSpeech.getAvailableLanguages()) {
+                if (base.equalsIgnoreCase(locale.getLanguage())) return locale;
+            }
+        } catch (Exception ignored) {
+            // Một vài engine ném lỗi ở đây; coi như không tìm được gì.
+        }
+        return null;
     }
 
     @Override

@@ -624,7 +624,12 @@
       : guessLanguageCandidates(state.activeSheet, text);
     var nativePlugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.NativeTextToSpeech;
     if (nativePlugin && typeof nativePlugin.speak === 'function') {
+      // Trên Android, speechSynthesis của WebView không đọc được nên plugin gốc là đường duy nhất;
+      // nó tự lùi về giọng mặc định và báo lại để ta nhắc người chơi cài thêm giọng.
       nativePlugin.speak({ text: text, lang: candidates[0], langs: candidates.join(','), rate: 0.92 })
+        .then(function (result) {
+          if (result && result.fallback) warnMissingVoice();
+        })
         .catch(function () { speakInBrowser(text, candidates); });
       return;
     }
@@ -745,29 +750,49 @@
     return null;
   }
 
+  /**
+   * Chỉ nhận tên bộ từ viết bằng tiếng Anh hoặc tên bản ngữ.
+   *
+   * Bản trước còn nhận cả tên tiếng Việt, nhưng những khóa đó quá ngắn nên trúng nhầm
+   * lung tung: "do thai" chứa "thai", "y" nằm trong "Flyers", "han" và "anh" thì gặp ở
+   * khắp nơi. Bỏ đi cho gọn, tên bộ từ vốn đang đặt bằng tiếng Anh hoặc bản ngữ cả.
+   */
   function detectLanguageFromName(name) {
     var rules = [
-      { keys: ['english', 'tieng anh', 'anh'], langs: ['en-US', 'en-GB'] },
-      { keys: ['japanese', 'japan', 'tieng nhat', 'nhat'], langs: ['ja-JP'] },
-      { keys: ['korean', 'korea', 'tieng han', 'han quoc', 'han'], langs: ['ko-KR'] },
-      { keys: ['chinese', 'china', 'mandarin', 'tieng trung', 'trung quoc', 'trung', 'hoa'], langs: ['zh-CN', 'zh-TW', 'zh-HK'] },
-      { keys: ['thai', 'thailand', 'tieng thai', 'thai lan'], langs: ['th-TH'] },
-      { keys: ['german', 'deutsch', 'deutsche', 'tieng duc', 'duc'], langs: ['de-DE'] },
-      { keys: ['french', 'francais', 'tieng phap', 'phap'], langs: ['fr-FR'] },
-      { keys: ['spanish', 'espanol', 'tieng tay ban nha', 'tay ban nha'], langs: ['es-ES', 'es-MX'] },
-      { keys: ['sanskrit', 'phan', 'tieng phan'], langs: ['sa-IN', 'hi-IN'] },
-      { keys: ['hindi', 'tieng hindi'], langs: ['hi-IN'] },
-      { keys: ['russian', 'tieng nga', 'nga'], langs: ['ru-RU'] },
-      { keys: ['greek', 'tieng hy lap', 'hy lap'], langs: ['el-GR'] },
-      { keys: ['arabic', 'tieng a rap', 'a rap'], langs: ['ar-SA', 'ar'] }
+      { keys: ['english'], langs: ['en-US', 'en-GB'] },
+      { keys: ['japanese', 'japan', 'nihongo'], langs: ['ja-JP'] },
+      { keys: ['korean', 'korea', 'hangul'], langs: ['ko-KR'] },
+      { keys: ['chinese', 'china', 'mandarin', 'hsk'], langs: ['zh-CN', 'zh-TW', 'zh-HK'] },
+      { keys: ['thai', 'thailand'], langs: ['th-TH'] },
+      { keys: ['german', 'deutsch'], langs: ['de-DE'] },
+      { keys: ['french', 'francais'], langs: ['fr-FR'] },
+      { keys: ['spanish', 'espanol'], langs: ['es-ES', 'es-MX'] },
+      { keys: ['portuguese', 'portugues'], langs: ['pt-BR', 'pt-PT'] },
+      { keys: ['italian', 'italiano'], langs: ['it-IT'] },
+      { keys: ['hebrew', 'ivrit'], langs: ['he-IL', 'iw-IL'] },
+      { keys: ['sanskrit'], langs: ['sa-IN', 'hi-IN'] },
+      { keys: ['hindi'], langs: ['hi-IN'] },
+      { keys: ['russian'], langs: ['ru-RU'] },
+      { keys: ['greek'], langs: ['el-GR'] },
+      { keys: ['arabic'], langs: ['ar-SA', 'ar'] }
     ];
 
+    var words = String(name || '').split(' ').filter(Boolean);
     for (var i = 0; i < rules.length; i += 1) {
-      if (rules[i].keys.some(function (key) { return name.indexOf(key) >= 0; })) {
-        return rules[i].langs;
+      for (var j = 0; j < rules[i].keys.length; j += 1) {
+        if (nameHasKey(words, rules[i].keys[j])) return rules[i].langs;
       }
     }
     return [];
+  }
+
+  /** Khớp trọn một từ, cho phép nối đuôi để "hsk" nhận "HSK3" và "japan" nhận "japanese". */
+  function nameHasKey(words, key) {
+    for (var i = 0; i < words.length; i += 1) {
+      if (words[i] === key) return true;
+      if (key.length >= 3 && words[i].indexOf(key) === 0) return true;
+    }
+    return false;
   }
 
   function submitScoreIfNeeded() {
