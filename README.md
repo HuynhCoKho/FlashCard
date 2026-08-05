@@ -2,6 +2,21 @@
 
 Trang GitHub Pages dùng Google Sheet làm nguồn từ vựng. Người học chọn sheet, xem nghĩa tiếng Việt, nhập từ ngoại ngữ tương ứng và nhận điểm ngay sau khi bấm Enter.
 
+## Giao diện 3 trang (bản 1.2.0)
+
+Ứng dụng dùng giao diện 3D nổi, chia thành 3 trang:
+
+1. **Trang chọn bộ từ** – nhập tên người chơi và chọn bộ từ. Danh sách bộ từ chính là
+   danh sách sheet trong Google Sheet, tự đồng bộ khi bạn thêm hoặc xóa sheet.
+   Bấm `BẮT ĐẦU HỌC` để vào màn chơi.
+2. **Trang chơi** – hiển thị điểm, số câu đúng/sai, chuỗi đúng và thẻ từ vựng.
+   Mỗi khi chuyển sang từ mới, thẻ lật mặt đúng kiểu flashcard. Nút loa đọc lại
+   nghĩa tiếng Việt đang hiển thị; đáp án đúng vẫn được đọc tự động như trước.
+3. **Trang bảng xếp hạng** – chỉ mở khi bấm `XEM BẢNG XẾP HẠNG` ở trang chơi, gồm
+   số người chơi, số lượt chơi và Top 10.
+
+Toàn bộ logic chơi, chấm điểm, cache và đồng bộ Google Sheet giữ nguyên như bản trước.
+
 ## Cách hoạt động
 
 - GitHub Pages hiển thị giao diện flashcard.
@@ -71,13 +86,51 @@ Build APK sau khi đã cài Java 21 và Android SDK:
 ```text
 npm.cmd install
 npm.cmd run android:build
+npm.cmd run android:bundle
 ```
+
+Trên Windows có thể chạy một lệnh duy nhất, file kết quả được đặt tên theo phiên
+bản và gom vào `dist\`:
+
+```text
+scripts\build-android.bat
+```
+
+Trên macOS/Linux dùng `npm run android:build:unix` và `npm run android:bundle:unix`.
 
 APK debug được tạo tại `android/app/build/outputs/apk/debug/app-debug.apk`.
 
 Bản phát hành Google Play dùng Android App Bundle tại
 `android/app/build/outputs/bundle/release/app-release.aab`. Khóa upload và mật
-khẩu phải được lưu riêng, tuyệt đối không commit vào Git.
+khẩu phải được lưu riêng, tuyệt đối không commit vào Git. Khi có đủ 4 biến môi
+trường `FLASHCARD_STORE_FILE`, `FLASHCARD_STORE_PASSWORD`, `FLASHCARD_KEY_ALIAS`,
+`FLASHCARD_KEY_PASSWORD` thì AAB được ký ngay lúc build; nếu thiếu, Gradle vẫn
+build ra bản chưa ký thay vì báo lỗi.
+
+### Build tự động bằng GitHub Actions
+
+Workflow `.github/workflows/android-release.yml` build cả APK debug lẫn AAB
+release trên máy chủ GitHub (đã có sẵn Android SDK). Chạy tay ở tab **Actions**
+hoặc đẩy tag `v1.2.0`; file kết quả nằm ở phần Artifacts và ở GitHub Release.
+
+Để AAB được ký bằng khóa upload của Google Play, thêm 4 secret trong
+`Settings > Secrets and variables > Actions`:
+
+| Secret | Nội dung |
+| --- | --- |
+| `FLASHCARD_STORE_BASE64` | file keystore `.jks` mã hóa base64 |
+| `FLASHCARD_STORE_PASSWORD` | mật khẩu keystore |
+| `FLASHCARD_KEY_ALIAS` | alias của khóa upload |
+| `FLASHCARD_KEY_PASSWORD` | mật khẩu khóa |
+
+Tạo chuỗi base64 từ keystore hiện có:
+
+```text
+certutil -encode upload-key.jks upload-key.txt   :: Windows
+base64 -w 0 upload-key.jks > upload-key.txt      # macOS/Linux
+```
+
+Phải dùng đúng khóa upload đã ký các bản trước, nếu không Play Console sẽ từ chối bản mới.
 
 Tài sản Google Play nằm trong `play-store/`, gồm icon 512×512, feature graphic
 1024×500 và nội dung mô tả tiếng Việt. Chính sách quyền riêng tư công khai tại
@@ -85,6 +138,10 @@ Tài sản Google Play nằm trong `play-store/`, gồm icon 512×512, feature g
 
 ## Tính năng
 
+- Giao diện 3D nổi, chia 3 trang: chọn bộ từ, màn chơi, bảng xếp hạng.
+- Thẻ lật mặt mỗi khi chuyển sang từ mới.
+- Nút loa trên thẻ đọc lại nghĩa tiếng Việt đang hiển thị.
+- Mỗi bộ từ có biểu tượng riêng, tự sinh theo tên sheet.
 - Chọn sheet để chơi.
 - Hiện nghĩa tiếng Việt ở flashcard.
 - Ghi chú được hiển thị mờ, in nghiêng, trong ngoặc.

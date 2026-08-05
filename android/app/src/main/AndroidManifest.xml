@@ -35,6 +35,23 @@
         </provider>
     </application>
 
+    <!--
+        Từ Android 11, app phải khai báo mới thấy được các app khác. Thiếu khối này thì
+        không liệt kê được bộ phát âm nào đang cài, cũng không gắn thẳng vào Google TTS,
+        nên máy nào đặt engine mặc định là của hãng sẽ chỉ đọc được tiếng Anh.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <intent>
+            <action android:name="android.speech.tts.engine.INSTALL_TTS_DATA" />
+        </intent>
+        <intent>
+            <action android:name="android.speech.tts.engine.CHECK_TTS_DATA" />
+        </intent>
+    </queries>
+
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />

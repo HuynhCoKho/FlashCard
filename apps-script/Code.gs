@@ -57,6 +57,10 @@ function doGet(e) {
       return output_(callback, { ok: true, stats: getStats_(true) });
     }
 
+    if (action === 'speak') {
+      return output_(callback, speakPayload_(params));
+    }
+
     return output_(callback, { ok: false, error: 'Action không hợp lệ.' });
   } catch (err) {
     return output_(callback, { ok: false, error: errorMessage_(err) });
@@ -114,6 +118,147 @@ function lookupIpa_(value) {
   } catch (err2) {}
 
   return ipa;
+}
+
+/* ============================ ĐỌC TỪ TRÊN MÁY CHỦ ============================
+ *
+ * Máy Huawei không có dịch vụ Google nên chỉ có bộ phát âm của hãng, thiếu hẳn
+ * tiếng Trung, Thái, Đức, và khoá luôn phần tải thêm giọng. Nhiều máy giá rẻ khác
+ * cũng vậy. Khi máy không đọc được, ứng dụng hỏi xuống đây và nhận về file MP3.
+ *
+ * Cần đặt trước khoá API trong Tệp > Thuộc tính dự án > Thuộc tính tập lệnh:
+ *   TTS_API_KEY = khoá của Google Cloud Text-to-Speech
+ * ========================================================================== */
+
+var TTS_MAX_TEXT_LENGTH = 200;
+var TTS_CACHE_TTL_SECONDS = 21600;
+var TTS_CACHE_MAX_BYTES = 95000;
+
+/** Cloud TTS gọi tiếng Quan Thoại là cmn chứ không phải zh, gọi tiếng Ả Rập là ar-XA. */
+var TTS_LANGUAGE_ALIASES = {
+  'zh': 'cmn-CN',
+  'zh-cn': 'cmn-CN',
+  'zh-tw': 'cmn-TW',
+  'zh-hk': 'yue-HK',
+  'ar': 'ar-XA',
+  'ar-sa': 'ar-XA',
+  'iw': 'he-IL',
+  'iw-il': 'he-IL',
+  'sa': 'hi-IN',
+  'sa-in': 'hi-IN'
+};
+
+/**
+ * Chạy hàm này trong trình soạn thảo để tự kiểm tra giọng đọc máy chủ.
+ *
+ * Lần chạy đầu Google sẽ hỏi cấp quyền gọi ra Internet — phải bấm đồng ý, không có
+ * quyền đó thì UrlFetchApp bị chặn và ứng dụng câm dù khoá API hoàn toàn đúng.
+ */
+function kiemTraGiongDoc() {
+  // Gọi trần, cố ý không bọc try/catch. synthesizeSpeech_ bắt mọi lỗi nên nếu gọi
+  // qua nó, lỗi thiếu quyền bị nuốt mất và Google không bao giờ hiện hộp thoại
+  // xin cấp quyền. Dòng này để lỗi ném thẳng ra ngoài.
+  UrlFetchApp.fetch('https://texttospeech.googleapis.com/v1/voices', { muteHttpExceptions: true });
+
+  var result = synthesizeSpeech_('你好', 'cmn-CN');
+  if (result.audio) {
+    Logger.log('OK — nhận được ' + result.audio.length + ' ký tự âm thanh.');
+  } else {
+    Logger.log('HỎNG — ' + result.error);
+  }
+  return result.error || 'OK';
+}
+
+function speakPayload_(params) {
+  var text = clean_(params.text);
+  var language = ttsLanguage_(clean_(params.lang));
+
+  if (!text) return { ok: false, error: 'Thiếu nội dung cần đọc.' };
+  if (text.length > TTS_MAX_TEXT_LENGTH) return { ok: false, error: 'Nội dung quá dài.' };
+
+  var result = synthesizeSpeech_(text, language);
+  if (!result.audio) return { ok: false, error: result.error || 'Máy chủ chưa tạo được âm thanh.' };
+
+  return { ok: true, mime: 'audio/mpeg', lang: language, audio: result.audio };
+}
+
+function ttsLanguage_(tag) {
+  var value = String(tag || '').trim();
+  if (!value) return 'en-US';
+  var alias = TTS_LANGUAGE_ALIASES[value.toLowerCase()];
+  return alias || value;
+}
+
+/**
+ * Trả về { audio, error }. Nói rõ lỗi thay vì im lặng, vì hỏng ở đây thì người dùng
+ * chỉ thấy ứng dụng câm và không ai đoán được là thiếu khoá, sai mã ngôn ngữ hay
+ * chưa bật API.
+ */
+function synthesizeSpeech_(text, language) {
+  var cache = CacheService.getScriptCache();
+  var digest = Utilities.base64EncodeWebSafe(
+    Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, text, Utilities.Charset.UTF_8)
+  );
+  var cacheKey = 'tts-v1-' + language + '-' + digest;
+
+  var cached = cache.get(cacheKey);
+  if (cached) return { audio: cached, error: '' };
+
+  var apiKey = PropertiesService.getScriptProperties().getProperty('TTS_API_KEY');
+  if (!apiKey) return { audio: '', error: 'Chưa đặt TTS_API_KEY trong Script Properties.' };
+
+  var audio = '';
+  var error = '';
+
+  try {
+    var response = UrlFetchApp.fetch(
+      'https://texttospeech.googleapis.com/v1/text:synthesize?key=' + encodeURIComponent(apiKey),
+      {
+        method: 'post',
+        contentType: 'application/json',
+        muteHttpExceptions: true,
+        payload: JSON.stringify({
+          input: { text: text },
+          // Không chỉ định tên giọng để Google tự chọn giọng Standard, nằm trong mức miễn phí.
+          voice: { languageCode: language },
+          audioConfig: { audioEncoding: 'MP3', speakingRate: 0.92 }
+        })
+      }
+    );
+
+    var code = response.getResponseCode();
+    var body = response.getContentText();
+
+    if (code === 200) {
+      audio = JSON.parse(body).audioContent || '';
+      if (!audio) error = 'Cloud TTS trả về rỗng.';
+    } else {
+      error = 'Cloud TTS ' + code + ': ' + hideApiKey_(upstreamMessage_(body));
+    }
+  } catch (err) {
+    error = 'Không gọi được Cloud TTS: ' + hideApiKey_(errorMessage_(err));
+  }
+
+  if (audio && audio.length <= TTS_CACHE_MAX_BYTES) {
+    try {
+      cache.put(cacheKey, audio, TTS_CACHE_TTL_SECONDS);
+    } catch (err2) {}
+  }
+
+  return { audio: audio, error: error };
+}
+
+function upstreamMessage_(body) {
+  try {
+    var parsed = JSON.parse(body);
+    if (parsed && parsed.error && parsed.error.message) return parsed.error.message;
+  } catch (err) {}
+  return String(body || '').slice(0, 300);
+}
+
+/** Google không lộ khoá trong thông báo lỗi, nhưng chặn sẵn cho chắc. */
+function hideApiKey_(message) {
+  return String(message || '').replace(/AIza[0-9A-Za-z_\-]{10,}/g, '<khoá đã ẩn>');
 }
 
 function extractIpa_(data) {
