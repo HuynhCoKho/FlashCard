@@ -17,6 +17,10 @@ Trang GitHub Pages dùng Google Sheet làm nguồn từ vựng. Người học c
 
 Toàn bộ logic chơi, chấm điểm, cache và đồng bộ Google Sheet giữ nguyên như bản trước.
 
+Từ bản 1.3.1, thứ tự thẻ vẫn được xáo ngẫu nhiên nhưng không lặp trong cùng một
+lượt. Người học phải đi qua toàn bộ từ của sheet thì ứng dụng mới xáo lại danh
+sách và bắt đầu lượt tiếp theo.
+
 ## Cách hoạt động
 
 - GitHub Pages hiển thị giao diện flashcard.

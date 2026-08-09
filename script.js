@@ -4,8 +4,7 @@
   var fallbackPlayerName = config.DEFAULT_PLAYER_NAME || 'Nguoi hoc';
   var pointsCorrect = Number(config.POINTS_CORRECT || 10);
   var pointsWrong = Number(config.POINTS_WRONG || -4);
-  var recentWindow = Number(config.RECENT_WINDOW || 6);
-  var cacheVersion = 'v2';
+  var cacheVersion = 'v3';
   var cacheMaxAge = 24 * 60 * 60 * 1000;
 
   var els = {
@@ -56,8 +55,11 @@
     activeSheet: '',
     words: [],
     current: null,
-    recentIds: [],
-    loadingMore: false,
+    remainingIds: [],
+    seenIds: {},
+    cycleNumber: 0,
+    allWordsLoaded: false,
+    waitingForWords: false,
     score: 0,
     correct: 0,
     wrong: 0,
@@ -399,8 +401,11 @@
     state.activeSheet = sheetName;
     state.words = [];
     state.current = null;
-    state.recentIds = [];
-    state.loadingMore = false;
+    state.remainingIds = [];
+    state.seenIds = {};
+    state.cycleNumber = 0;
+    state.allWordsLoaded = false;
+    state.waitingForWords = false;
     state.score = 0;
     state.correct = 0;
     state.wrong = 0;
@@ -436,14 +441,14 @@
     loadWords(sheetName)
       .then(function (payload) {
         if (selectionToken !== state.selectionToken) return;
+        if (state.allWordsLoaded) return;
         var words = validWords(payload.words || []);
         if (!words.length) {
           throw new Error('Sheet này chưa có đủ cột tiếng Việt và từ ngoại ngữ.');
         }
-        writeCache('words', sheetName, words);
         if (!cachedWords || !state.current) activateWords(sheetName, words, selectionToken, false);
         else {
-          state.words = mergeWords(state.words, words);
+          setWords(words, false);
           setStatus('Đã cập nhật dữ liệu mới', 'ok');
         }
       })
@@ -458,6 +463,34 @@
           kicker: 'Không tải được bộ từ',
           vi: err.message
         });
+      });
+
+    // Batch đầu giúp hiện thẻ nhanh. Danh sách đầy đủ được tải nền để bảo đảm
+    // mỗi từ chỉ xuất hiện một lần trong một lượt, kể cả sheet có hàng nghìn từ.
+    loadAllWords(sheetName)
+      .then(function (payload) {
+        if (selectionToken !== state.selectionToken) return;
+        var words = validWords(payload.words || []);
+        if (!words.length) return;
+        setWords(words, true);
+        state.allWordsLoaded = true;
+        writeCache('words', sheetName, words);
+        setStatus('Đã tải đủ ' + words.length + ' từ', 'ok');
+        if (state.waitingForWords) {
+          state.waitingForWords = false;
+          els.answerInput.disabled = false;
+          els.submitButton.disabled = false;
+          nextCard();
+        } else if (!state.current) {
+          state.cycleNumber = 1;
+          els.answerInput.disabled = false;
+          els.submitButton.disabled = false;
+          recordPlayStart();
+          nextCard();
+        }
+      })
+      .catch(function () {
+        // Vẫn cho học phần dữ liệu đã tải; không lặp lại khi chưa biết đã đủ sheet.
       });
   }
 
@@ -475,10 +508,43 @@
     return Object.keys(byId).map(function (id) { return byId[id]; });
   }
 
+  function shuffledIds(words) {
+    var ids = (words || []).map(function (word) { return word.id; });
+    for (var i = ids.length - 1; i > 0; i -= 1) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var temp = ids[i];
+      ids[i] = ids[j];
+      ids[j] = temp;
+    }
+    return ids;
+  }
+
+  function setWords(words, replace) {
+    var nextWords = replace ? validWords(words) : mergeWords(state.words, words);
+    var validIds = {};
+    nextWords.forEach(function (word) { validIds[word.id] = true; });
+    state.words = nextWords;
+
+    state.remainingIds = state.remainingIds.filter(function (id) { return validIds[id]; });
+    var queued = {};
+    state.remainingIds.forEach(function (id) { queued[id] = true; });
+    var additions = nextWords.filter(function (word) {
+      return !state.seenIds[word.id] && !queued[word.id] && (!state.current || state.current.id !== word.id);
+    });
+    state.remainingIds = state.remainingIds.concat(shuffledIds(additions));
+  }
+
+  function startNewCycle() {
+    state.cycleNumber += 1;
+    state.seenIds = {};
+    state.remainingIds = shuffledIds(state.words);
+  }
+
   function activateWords(sheetName, words, selectionToken, fromCache) {
     if (selectionToken !== state.selectionToken || sheetName !== state.activeSheet) return;
-    state.words = validWords(words);
+    setWords(words, true);
     if (!state.words.length) return;
+    if (!state.cycleNumber) state.cycleNumber = 1;
     setStatus(fromCache ? 'Sẵn sàng từ dữ liệu đã lưu' : 'Đã sẵn sàng', 'ok');
     els.answerInput.disabled = false;
     els.submitButton.disabled = false;
@@ -490,20 +556,27 @@
 
   function nextCard() {
     if (!state.words.length) return;
-    var answered = state.correct + state.wrong;
-    if ((state.words.length < 12 || (answered > 0 && answered % 20 === 0)) && !state.loadingMore) {
-      fetchMoreWords();
+    if (!state.remainingIds.length) {
+      if (!state.allWordsLoaded) {
+        state.current = null;
+        state.waitingForWords = true;
+        els.answerInput.disabled = true;
+        els.submitButton.disabled = true;
+        setStatus('Đang tải phần còn lại của sheet', 'pending');
+        return;
+      }
+      startNewCycle();
+      setStatus('Bắt đầu lượt ' + state.cycleNumber, 'ok');
     }
-    var candidates = state.words.filter(function (word) {
-      return state.recentIds.indexOf(word.id) === -1;
-    });
-    if (!candidates.length) candidates = state.words.slice();
-    var chosen = candidates[Math.floor(Math.random() * candidates.length)];
+
+    var chosenId = state.remainingIds.shift();
+    var chosen = state.words.find(function (word) { return word.id === chosenId; });
+    if (!chosen) {
+      nextCard();
+      return;
+    }
     state.current = chosen;
-    state.recentIds.push(chosen.id);
-    while (state.recentIds.length > Math.min(recentWindow, Math.max(1, state.words.length - 1))) {
-      state.recentIds.shift();
-    }
+    state.seenIds[chosen.id] = true;
     renderCard(chosen);
   }
 
@@ -514,26 +587,8 @@
       });
   }
 
-  function fetchMoreWords() {
-    if (!state.activeSheet) return;
-    state.loadingMore = true;
-    api({ action: 'batch', sheet: state.activeSheet, limit: 40 }, 90000)
-      .then(function (payload) {
-        var existing = {};
-        state.words.forEach(function (word) {
-          existing[word.id] = true;
-        });
-        (payload.words || []).forEach(function (word) {
-          if (word && word.vi && word.answer && !existing[word.id]) {
-            state.words.push(word);
-            existing[word.id] = true;
-          }
-        });
-      })
-      .catch(function () {})
-      .finally(function () {
-        state.loadingMore = false;
-      });
+  function loadAllWords(sheetName) {
+    return api({ action: 'words', sheet: sheetName }, 240000);
   }
 
   function visibleFace() {
