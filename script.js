@@ -250,6 +250,30 @@
     if (name === 'game' && !els.answerInput.disabled) els.answerInput.focus();
   }
 
+  function keepAnswerAreaVisible(target) {
+    window.requestAnimationFrame(function () {
+      window.setTimeout(function () {
+        try {
+          (target || els.answerForm).scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        } catch (err) {}
+      }, 80);
+    });
+  }
+
+  function updateKeyboardLayout() {
+    var viewport = window.visualViewport;
+    var viewportHeight = viewport ? viewport.height : window.innerHeight;
+    var keyboardInset = viewport
+      ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
+      : 0;
+    var keyboardOpen = document.activeElement === els.answerInput
+      && (keyboardInset > 100 || viewportHeight < window.innerHeight * 0.78);
+
+    document.body.classList.toggle('keyboard-open', keyboardOpen);
+    document.documentElement.style.setProperty('--keyboard-inset', keyboardOpen ? keyboardInset + 'px' : '0px');
+    if (keyboardOpen) keepAnswerAreaVisible(els.answerForm);
+  }
+
   function api(params, timeoutMs) {
     return new Promise(function (resolve, reject) {
       if (!endpoint) {
@@ -587,6 +611,7 @@
   function setFeedback(text, mode) {
     els.feedback.textContent = text;
     els.feedback.dataset.mode = mode || '';
+    if (document.body.classList.contains('keyboard-open')) keepAnswerAreaVisible(els.feedback);
   }
 
   function submitAnswer() {
@@ -971,6 +996,18 @@
     event.preventDefault();
     submitAnswer();
   });
+
+  els.answerInput.addEventListener('focus', function () {
+    updateKeyboardLayout();
+    keepAnswerAreaVisible(els.answerForm);
+  });
+  els.answerInput.addEventListener('blur', function () {
+    window.setTimeout(updateKeyboardLayout, 120);
+  });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', updateKeyboardLayout);
+    window.visualViewport.addEventListener('scroll', updateKeyboardLayout);
+  }
 
   els.startButton.addEventListener('click', function () {
     if (!state.pendingSheet) return;

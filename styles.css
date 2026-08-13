@@ -42,6 +42,7 @@ body {
 body {
   min-height: 100vh;
   min-height: 100dvh;
+  padding-bottom: var(--keyboard-inset, 0px);
   background: linear-gradient(180deg, #bfe6ef 0%, #dcf1e6 45%, #eaf6df 100%) fixed;
   color: var(--ink);
   font-family: "Be Vietnam Pro", "Noto Sans", Arial, Helvetica, sans-serif;
@@ -786,6 +787,36 @@ h2 {
   font-size: 15px;
   font-weight: 700;
   text-align: center;
+  scroll-margin-bottom: 18px;
+}
+
+/* Khi bàn phím điện thoại mở, ưu tiên thẻ từ, ô nhập và phản hồi. */
+body.keyboard-open .page-game {
+  gap: 10px;
+}
+
+body.keyboard-open .page-game .game-heading,
+body.keyboard-open .page-game .game-top-row,
+body.keyboard-open .page-game .progress-strip {
+  display: none;
+}
+
+body.keyboard-open .page-game .flashcard {
+  min-height: clamp(132px, 28vh, 190px);
+}
+
+body.keyboard-open .page-game .card-face {
+  gap: 8px;
+  padding: 16px;
+}
+
+body.keyboard-open .page-game .vietnamese-text {
+  font-size: clamp(25px, 7vw, 34px);
+}
+
+body.keyboard-open .answer-form {
+  scroll-margin-top: 10px;
+  scroll-margin-bottom: 14px;
 }
 
 .feedback-hint {
