@@ -3,7 +3,6 @@ window.FLASHCARD_CONFIG = {
   SPREADSHEET_ID: '1MDt7HLzuhndU30Ln2uW7Ibd9O1M2FRqTtpGw3dRw_wM',
   POINTS_CORRECT: 10,
   POINTS_WRONG: -4,
-  RECENT_WINDOW: 6,
   DEFAULT_PLAYER_NAME: 'Người học',
   FALLBACK_SHEETS: [
     { name: 'Starters', count: 227 },

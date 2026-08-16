@@ -4,7 +4,6 @@
   var fallbackPlayerName = config.DEFAULT_PLAYER_NAME || 'Nguoi hoc';
   var pointsCorrect = Number(config.POINTS_CORRECT || 10);
   var pointsWrong = Number(config.POINTS_WRONG || -4);
-  var recentWindow = Number(config.RECENT_WINDOW || 6);
   // v3: mỗi từ có thêm trường image, bản lưu cũ thiếu nên phải nạp lại từ đầu.
   var cacheVersion = 'v3';
   var cacheMaxAge = 24 * 60 * 60 * 1000;
@@ -57,11 +56,11 @@
     pendingSheet: '',
     activeSheet: '',
     words: [],
+    byId: {},
     current: null,
-    recentIds: [],
-    loadingMore: false,
-    emptyBatches: 0,
-    allWordsLoaded: false,
+    // deck: những id chưa ra trong lượt này, đã xáo sẵn. seenThisPass: đã ra rồi.
+    deck: [],
+    seenThisPass: {},
     pictogramSheet: false,
     score: 0,
     correct: 0,
@@ -441,11 +440,10 @@
   function resetRound(sheetName) {
     state.activeSheet = sheetName;
     state.words = [];
+    state.byId = {};
     state.current = null;
-    state.recentIds = [];
-    state.loadingMore = false;
-    state.emptyBatches = 0;
-    state.allWordsLoaded = false;
+    state.deck = [];
+    state.seenThisPass = {};
     state.pictogramSheet = false;
     state.score = 0;
     state.correct = 0;
@@ -479,19 +477,16 @@
       activateWords(sheetName, cachedWords, selectionToken, true);
     }
 
-    loadWords(sheetName)
+    // Mẻ nhỏ để vào học ngay, rồi lấy trọn sheet ở phía sau cho đủ một lượt thẻ.
+    loadFirstBatch(sheetName)
       .then(function (payload) {
         if (selectionToken !== state.selectionToken) return;
         var words = validWords(payload.words || []);
         if (!words.length) {
           throw new Error('Sheet này chưa có đủ cột tiếng Việt và từ ngoại ngữ.');
         }
-        writeCache('words', sheetName, words);
-        if (!cachedWords || !state.current) activateWords(sheetName, words, selectionToken, false);
-        else {
-          state.words = mergeWords(state.words, words);
-          setStatus('Đã cập nhật dữ liệu mới', 'ok');
-        }
+        if (!state.current) activateWords(sheetName, words, selectionToken, false);
+        else addWords(words);
       })
       .catch(function (err) {
         if (selectionToken !== state.selectionToken) return;
@@ -505,6 +500,32 @@
           vi: err.message
         });
       });
+
+    loadWholeSheet(sheetName, selectionToken, cachedWords);
+  }
+
+  /**
+   * Một lượt thẻ phải đi hết sheet mới lặp lại, nên cuối cùng vẫn phải có đủ từ
+   * trong tay. Tải nguyên sheet chạy ngầm phía sau mẻ đầu: người học bấm vào là
+   * chơi được ngay, phần còn lại lặng lẽ nhập vào bộ bài đang chơi dở.
+   */
+  function loadWholeSheet(sheetName, selectionToken, cachedWords) {
+    api({ action: 'words', sheet: sheetName }, 240000)
+      .then(function (payload) {
+        if (selectionToken !== state.selectionToken) return;
+        var words = validWords(payload.words || []);
+        if (!words.length) return;
+        writeCache('words', sheetName, words);
+        if (!state.current) {
+          activateWords(sheetName, words, selectionToken, false);
+          return;
+        }
+        var added = addWords(words);
+        if (added || !cachedWords) setStatus('Đã có đủ ' + state.words.length + ' từ', 'ok');
+      })
+      .catch(function () {
+        // Mẻ đầu và bản lưu vẫn chơi được; chỉ là một lượt sẽ ngắn hơn cả sheet.
+      });
   }
 
   function validWords(words) {
@@ -513,19 +534,35 @@
     });
   }
 
-  function mergeWords(existingWords, newWords) {
-    var byId = {};
-    (existingWords || []).concat(newWords || []).forEach(function (word) {
-      if (word && word.id) byId[word.id] = word;
+  /** Giữ danh sách từ và bảng tra theo id luôn khớp nhau. */
+  function setWords(words) {
+    state.words = validWords(words);
+    state.byId = {};
+    state.words.forEach(function (word) {
+      state.byId[word.id] = word;
     });
-    return Object.keys(byId).map(function (id) { return byId[id]; });
+  }
+
+  /** Trả về số từ thật sự mới, để biết có cần báo lại trạng thái không. */
+  function addWords(words) {
+    var fresh = validWords(words).filter(function (word) {
+      return !state.byId[word.id];
+    });
+    if (!fresh.length) return 0;
+    fresh.forEach(function (word) {
+      state.words.push(word);
+      state.byId[word.id] = word;
+    });
+    dealIntoDeck(fresh);
+    return fresh.length;
   }
 
   function activateWords(sheetName, words, selectionToken, fromCache) {
     if (selectionToken !== state.selectionToken || sheetName !== state.activeSheet) return;
-    state.words = validWords(words);
+    setWords(words);
     if (!state.words.length) return;
     state.pictogramSheet = sheetUsesPictograms(sheetName, state.words[0].answer);
+    startNewPass();
     setStatus(fromCache ? 'Sẵn sàng từ dữ liệu đã lưu' : 'Đã sẵn sàng', 'ok');
     els.answerInput.disabled = false;
     els.submitButton.disabled = false;
@@ -535,63 +572,64 @@
     }
   }
 
+  /* ================= Bộ bài: ngẫu nhiên nhưng không lặp trong một lượt ================= */
+
+  function shuffled(items) {
+    var out = items.slice();
+    for (var i = out.length - 1; i > 0; i -= 1) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var swap = out[i];
+      out[i] = out[j];
+      out[j] = swap;
+    }
+    return out;
+  }
+
+  /** Xáo lại toàn bộ sheet và mở một lượt mới. */
+  function startNewPass() {
+    state.seenThisPass = {};
+    state.deck = shuffled(state.words.map(function (word) { return word.id; }));
+    // Từ vừa học xong mà nằm ngay đầu lượt sau thì trông như bị lặp.
+    if (state.deck.length > 1 && state.current && state.deck[0] === state.current.id) {
+      var at = 1 + Math.floor(Math.random() * (state.deck.length - 1));
+      state.deck[0] = state.deck[at];
+      state.deck[at] = state.current.id;
+    }
+  }
+
+  /** Từ mới tải về được chia vào chỗ ngẫu nhiên của phần còn lại trong lượt này. */
+  function dealIntoDeck(words) {
+    var ids = words.filter(function (word) {
+      return !state.seenThisPass[word.id];
+    }).map(function (word) { return word.id; });
+    if (!ids.length) return;
+    state.deck = shuffled(state.deck.concat(ids));
+  }
+
+  function takeFromDeck() {
+    while (state.deck.length) {
+      var word = state.byId[state.deck.shift()];
+      if (word) return word;
+    }
+    return null;
+  }
+
   function nextCard() {
     if (!state.words.length) return;
-    var answered = state.correct + state.wrong;
-    if (state.words.length < 12 || (answered > 0 && answered % 20 === 0)) {
-      fetchMoreWords();
+    var chosen = takeFromDeck();
+    if (!chosen) {
+      // Hết một lượt qua toàn bộ sheet: xáo lại từ đầu.
+      startNewPass();
+      chosen = takeFromDeck();
     }
-    var candidates = state.words.filter(function (word) {
-      return state.recentIds.indexOf(word.id) === -1;
-    });
-    if (!candidates.length) candidates = state.words.slice();
-    var chosen = candidates[Math.floor(Math.random() * candidates.length)];
+    if (!chosen) return;
+    state.seenThisPass[chosen.id] = true;
     state.current = chosen;
-    state.recentIds.push(chosen.id);
-    while (state.recentIds.length > Math.min(recentWindow, Math.max(1, state.words.length - 1))) {
-      state.recentIds.shift();
-    }
     renderCard(chosen);
   }
 
-  function loadWords(sheetName) {
-    return api({ action: 'batch', sheet: sheetName, limit: 50 }, 90000)
-      .catch(function () {
-        return api({ action: 'words', sheet: sheetName }, 240000);
-      });
-  }
-
-  /**
-   * Bộ từ nhỏ hơn 12 từ khiến nextCard gọi hàm này ở mọi thẻ. Trước đây mỗi lượt
-   * lại bắn một yêu cầu mới dù máy chủ chẳng còn từ nào để trả, gây bão gọi mạng.
-   * Hai lượt liên tiếp không thêm được từ nào thì coi như đã lấy hết và dừng hẳn.
-   */
-  function fetchMoreWords() {
-    if (!state.activeSheet || state.loadingMore || state.allWordsLoaded) return;
-    var selectionToken = state.selectionToken;
-    state.loadingMore = true;
-    api({ action: 'batch', sheet: state.activeSheet, limit: 40 }, 90000)
-      .then(function (payload) {
-        if (selectionToken !== state.selectionToken) return;
-        var existing = {};
-        state.words.forEach(function (word) {
-          existing[word.id] = true;
-        });
-        var added = 0;
-        (payload.words || []).forEach(function (word) {
-          if (word && word.vi && word.answer && !existing[word.id]) {
-            state.words.push(word);
-            existing[word.id] = true;
-            added += 1;
-          }
-        });
-        state.emptyBatches = added ? 0 : state.emptyBatches + 1;
-        if (state.emptyBatches >= 2) state.allWordsLoaded = true;
-      })
-      .catch(function () {})
-      .then(function () {
-        if (selectionToken === state.selectionToken) state.loadingMore = false;
-      });
+  function loadFirstBatch(sheetName) {
+    return api({ action: 'batch', sheet: sheetName, limit: 50 }, 90000);
   }
 
   function visibleFace() {
@@ -1186,6 +1224,15 @@
     sheetIcon: sheetIcon,
     avatarFor: avatarFor,
     imageSource: imageSource,
-    sheetUsesPictograms: sheetUsesPictograms
+    sheetUsesPictograms: sheetUsesPictograms,
+    passState: function () {
+      return {
+        sheet: state.activeSheet,
+        words: state.words.length,
+        deckLeft: state.deck.length,
+        seen: Object.keys(state.seenThisPass).length,
+        current: state.current ? state.current.id : ''
+      };
+    }
   };
 })();
