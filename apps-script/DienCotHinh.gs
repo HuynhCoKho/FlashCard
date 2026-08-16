@@ -1117,12 +1117,46 @@ var NGHIA_SANG_HINH = {
   'một phần tư': '🕒',
   'đúng': '✅',
   'sai': '❌',
-  'xử lý thời gian thực': '⚙️'
+  'xử lý thời gian thực': '⚙️',
+  'búa': '🔨',
+  'hôn': '💏',
+  'ngọn núi': '⛰️',
+  'đài phát thanh': '📻',
+  'chỗ ngồi': '💺',
+  'vòi sen': '🚿',
+  'đèn pin': '🔦',
+  'kính mắt': '👓',
+  'túi xách': '👜',
+  'bắt tay': '🤝',
+  'tai nghe': '🎧',
+  'xúc xích': '🌭',
+  'quần jean': '👖',
+  'nhãn': '🏷️',
+  'thang': '🪜',
+  'chanh vàng': '🍋',
+  'bóng đèn': '💡',
+  'son môi': '💄',
+  'hành lý': '🧳',
+  'sổ tay': '📓',
+  'hành tây': '🧅',
+  'gói hàng': '📦',
+  'bắp rang': '🍿',
+  'biển báo': '🛑',
+  'ly rượu': '🍷',
+  'rượu vang': '🍷',
+  'liên kết': '🔗',
+  'kết nối': '🔗',
+  'chia': '➗',
+  'biên lai': '🧾',
+  'ga tàu': '🚉',
+  'trạm': '🚉',
+  'vằn ngựa': '🦓',
+  'bánh mì kẹp xúc xích': '🌭'
 };
 
 // Chữ đứng đầu chỉ để phân loại, bỏ đi để lấy lõi nghĩa.
 var LOAI_TU = [
-  'con', 'cái', 'quả', 'trái', 'chiếc', 'cây', 'bông', 'tấm', 'ngôi', 'căn',
+  'con', 'cái', 'quả', 'trái', 'chiếc', 'cây', 'bông', 'tấm', 'ngôi', 'căn', 'ngọn',
   'ly', 'cốc', 'đôi', 'bộ', 'món', 'chai', 'lọ', 'tờ', 'quyển', 'cuốn',
   'sự', 'việc', 'cuộc', 'nỗi', 'niềm', 'người', 'kẻ', 'nhà', 'thợ', 'đồ'
 ];
