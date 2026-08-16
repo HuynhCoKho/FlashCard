@@ -951,7 +951,173 @@ var NGHIA_SANG_HINH = {
   'lễ': '🎊',
   'kho báu': '💎',
   'vàng': '🥇',
-  'bạc': '🥈'
+  'bạc': '🥈',
+  'thanh toán': '💳',
+  'tài khoản': '🏦',
+  'giao dịch': '💳',
+  'chuyển khoản': '💸',
+  'tiền mặt': '💵',
+  'tiền gửi': '🏦',
+  'rút tiền': '🏧',
+  'lãi suất': '📈',
+  'tỷ giá': '💱',
+  'ngoại tệ': '💱',
+  'thẻ tín dụng': '💳',
+  'tín dụng': '💳',
+  'cho vay': '🏦',
+  'thế chấp': '🏠',
+  'nợ xấu': '📉',
+  'bảo hiểm': '🛡️',
+  'rủi ro': '⚠️',
+  'cổ phiếu': '📊',
+  'trái phiếu': '📜',
+  'chứng khoán': '📊',
+  'quỹ': '💰',
+  'dòng tiền': '💵',
+  'doanh thu': '📈',
+  'ngân sách': '💰',
+  'kế toán': '🧮',
+  'kiểm toán': '🔍',
+  'sổ sách': '📒',
+  'giấy tờ': '📄',
+  'chi nhánh': '🏦',
+  'phí dịch vụ': '🏷️',
+  'hoàn tiền': '↩️',
+  'mô hình': '📐',
+  'học máy': '🤖',
+  'mạng nơ ron': '🧠',
+  'huấn luyện': '🏋️',
+  'mô phỏng': '🎮',
+  'nhận dạng': '🔍',
+  'phân loại': '🗂️',
+  'dự đoán': '🔮',
+  'xử lý': '⚙️',
+  'tự động': '🤖',
+  'tự động hóa': '🤖',
+  'điều khiển': '🎛️',
+  'cảm biến': '📡',
+  'giám sát': '👁️',
+  'đám mây': '☁️',
+  'máy chủ': '🖥️',
+  'cơ sở dữ liệu': '🗄️',
+  'phần cứng': '🔩',
+  'mã nguồn': '💻',
+  'lập trình': '💻',
+  'giao diện': '🖥️',
+  'bộ nhớ': '💾',
+  'vi xử lý': '🔩',
+  'cánh tay robot': '🦾',
+  'băng tải': '📦',
+  'cơ cấu': '⚙️',
+  'truyền động': '⚙️',
+  'lắp ráp': '🔧',
+  'vận hành': '⚙️',
+  'bảo trì': '🔧',
+  'bảo dưỡng': '🔧',
+  'sự cố': '💥',
+  'cảnh báo': '⚠️',
+  'khẩn cấp': '🚨',
+  'thử nghiệm': '🧪',
+  'kiểm thử': '🧪',
+  'lắp đặt': '🔧',
+  'hiệu chuẩn': '📏',
+  'độ chính xác': '🎯',
+  'quản lý': '🧑‍💼',
+  'phát triển': '📈',
+  'đánh giá': '⭐',
+  'dịch vụ': '🛎️',
+  'sản phẩm': '📦',
+  'doanh nghiệp': '🏢',
+  'chiến lược': '♟️',
+  'quy trình': '📋',
+  'tiêu chuẩn': '📏',
+  'hiệu quả': '⚡',
+  'năng suất': '📈',
+  'cạnh tranh': '🏆',
+  'hợp đồng': '📜',
+  'thỏa thuận': '🤝',
+  'đàm phán': '🤝',
+  'tài liệu': '📄',
+  'hồ sơ': '🗂️',
+  'giấy phép': '📜',
+  'chứng chỉ': '🎓',
+  'trách nhiệm': '⚖️',
+  'nghĩa vụ': '⚖️',
+  'chính sách': '📜',
+  'pháp luật': '⚖️',
+  'quy định': '📋',
+  'vi phạm': '🚫',
+  'xử phạt': '⚖️',
+  'thanh tra': '🔍',
+  'nhân sự': '👥',
+  'tuyển dụng': '🙋',
+  'đào tạo': '🧑‍🏫',
+  'lương thưởng': '💵',
+  'nghỉ phép': '🏖️',
+  'khảo sát': '📋',
+  'phân tích': '📊',
+  'kết luận': '✔️',
+  'bằng chứng': '🔍',
+  'lý thuyết': '📚',
+  'thực nghiệm': '🧪',
+  'khái niệm': '💭',
+  'định nghĩa': '📖',
+  'ví dụ': '📝',
+  'hậu quả': '💥',
+  'ảnh hưởng': '💥',
+  'xu hướng': '📈',
+  'tỷ lệ': '💯',
+  'số liệu': '📊',
+  'biểu đồ': '📊',
+  'nguồn gốc': '🌱',
+  'quan điểm': '💬',
+  'lập luận': '🗣️',
+  'giả thuyết': '💭',
+  'chủ đề': '📌',
+  'nội dung': '📄',
+  'bài viết': '📝',
+  'luận văn': '📜',
+  'tóm tắt': '📋',
+  'bao nhiêu': '🔢',
+  'địa chỉ': '📍',
+  'số điện thoại': '📱',
+  'ngày sinh': '🎂',
+  'họ tên': '📝',
+  'gặp gỡ': '🤝',
+  'hẹn gặp': '📅',
+  'đặt phòng': '🏨',
+  'đặt bàn': '🍽️',
+  'thực đơn': '📋',
+  'món ăn': '🍽️',
+  'đồ uống': '🥤',
+  'nhà thuốc': '💊',
+  'khám bệnh': '👨‍⚕️',
+  'thuốc men': '💊',
+  'mua sắm': '🛒',
+  'giặt giũ': '🧺',
+  'thể dục': '🏃',
+  'nghỉ ngơi': '🛀',
+  'đi lại': '🚶',
+  'giày dép': '👟',
+  'bàn ghế': '🪑',
+  'đồ đạc': '🛋️',
+  'gia vị': '🧂',
+  'bữa cơm': '🍚',
+  'chào hỏi': '👋',
+  'chúc mừng': '🎉',
+  'sinh hoạt': '🏡',
+  'thời khóa biểu': '📅',
+  'giờ giấc': '⏰',
+  'thời tiết hôm nay': '🌦️',
+  'mười': '🔟',
+  'hai mươi': '🔢',
+  'một trăm': '💯',
+  'một nghìn': '🔢',
+  'một tỷ': '🔢',
+  'một phần tư': '🕒',
+  'đúng': '✅',
+  'sai': '❌',
+  'xử lý thời gian thực': '⚙️'
 };
 
 // Chữ đứng đầu chỉ để phân loại, bỏ đi để lấy lõi nghĩa.
@@ -1094,6 +1260,88 @@ function dienCotHinh() {
   }
 
   var ketQua = dong.join('\n') + '\n\nTỔNG CỘNG THÊM MỚI: ' + tongMoi;
+  Logger.log(ketQua);
+  return ketQua;
+}
+
+/**
+ * Soát cột HÌNH và chỉ ra những ô ứng dụng SẼ KHÔNG hiện được.
+ *
+ * Cần có vì khi ảnh hỏng, ứng dụng lặng lẽ giấu khung đi chứ không báo gì —
+ * nhìn vào bảng tính thấy ô có nội dung, mở app lại chẳng thấy hình, không biết
+ * đường nào mà lần. Dán link Drive hàng loạt thì càng phải soát.
+ *
+ * Luật ở đây chép đúng theo hàm imageSource trong script.js.
+ */
+function kiemTraCotHinh() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheets = ss.getSheets();
+  var loi = [];
+  var demEmoji = 0;
+  var demLink = 0;
+
+  for (var s = 0; s < sheets.length; s += 1) {
+    var sheet = sheets[s];
+    var ten = sheet.getName();
+    if (SYSTEM_SHEETS[ten.toUpperCase()]) continue;
+
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 2) continue;
+    var lastCol = Math.max(sheet.getLastColumn(), 6);
+    var cot = detectColumns_(sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0]);
+    if (cot.image < 0) continue;
+
+    var duLieu = sheet.getRange(2, 1, lastRow - 1, lastCol).getDisplayValues();
+    for (var r = 0; r < duLieu.length; r += 1) {
+      var o = clean_(duLieu[r][cot.image]);
+      if (!o) continue;
+      var tu = clean_(duLieu[r][cot.answer]);
+      var viTri = ten + '!' + (r + 2) + ' (' + tu + ')';
+      var vd = o.length > 60 ? o.slice(0, 60) + '…' : o;
+
+      if (/^http:\/\//i.test(o)) {
+        loi.push(viTri + ': dùng http, ứng dụng Android chặn — phải là https · ' + vd);
+        continue;
+      }
+      if (/^https:\/\//i.test(o)) {
+        if (o.indexOf('drive.google.com/drive/folders/') >= 0) {
+          loi.push(viTri + ': đây là link THƯ MỤC Drive, phải là link từng tệp · ' + vd);
+          continue;
+        }
+        var m = o.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:[^#]*&)?id=)([A-Za-z0-9_-]+)/);
+        if (o.indexOf('drive.google.com') >= 0 && !m) {
+          loi.push(viTri + ': link Drive không rút được mã tệp · ' + vd);
+          continue;
+        }
+        if (m) {
+          try {
+            var quyen = DriveApp.getFileById(m[1]).getSharingAccess();
+            if (quyen !== DriveApp.Access.ANYONE && quyen !== DriveApp.Access.ANYONE_WITH_LINK) {
+              loi.push(viTri + ': tệp Drive chưa mở công khai, máy người học sẽ không tải được · ' + vd);
+              continue;
+            }
+          } catch (err) {
+            loi.push(viTri + ': không mở được tệp Drive (sai mã hoặc đã xoá) · ' + vd);
+            continue;
+          }
+        }
+        demLink += 1;
+        continue;
+      }
+      // Không phải link: mã tệp Drive trần, hoặc emoji. Dài quá thì ứng dụng bỏ qua.
+      if (/^[A-Za-z0-9_-]{20,80}$/.test(o)) { demLink += 1; continue; }
+      if (o.length > 12) {
+        loi.push(viTri + ': dài ' + o.length + ' ký tự, không phải link cũng không phải emoji — ứng dụng sẽ bỏ qua · ' + vd);
+        continue;
+      }
+      demEmoji += 1;
+    }
+  }
+
+  var ketQua = 'Emoji hợp lệ: ' + demEmoji + '\nLink ảnh hợp lệ: ' + demLink
+    + '\nÔ có vấn đề: ' + loi.length
+    + (loi.length ? '\n\n' + loi.slice(0, 200).join('\n') : '')
+    + (loi.length > 200 ? '\n… và ' + (loi.length - 200) + ' ô nữa' : '');
   Logger.log(ketQua);
   return ketQua;
 }

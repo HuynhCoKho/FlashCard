@@ -73,6 +73,27 @@ Hai dòng cuối là chỗ dễ mất nhất: cả hai đều trả về chuỗi
 `getFormulas()` và `getValues()` mới phân biệt được, và ghi theo từng đoạn liền
 mạch để nhảy qua những dòng đang giữ ảnh trong ô.
 
-Độ phủ đo trên 26.251 từ: điền được 8.850 hình (34%). Sheet ngôn ngữ nhập môn
-phủ 40–50%, sheet học thuật (SAT, IELTS) thấp hơn nhiều vì phần lớn là từ trừu
-tượng — chỗ đó thà để trống còn hơn gán hình sai.
+Độ phủ đo trên 26.251 từ: điền được **11.031 hình (42%)** từ 1.103 khái niệm.
+Sheet ngôn ngữ và chuyên ngành phủ 40–57%, riêng SAT và IELTS thấp hơn nhiều vì
+phần lớn là từ trừu tượng — chỗ đó thà để trống còn hơn gán hình sai.
+
+## Soát cột HÌNH trước khi tin nó
+
+Hàm `kiemTraCotHinh` trong cùng tệp quét toàn bộ cột HÌNH và chỉ ra những ô
+**ứng dụng sẽ không hiện được**. Chạy nó mỗi khi vừa dán link ảnh hàng loạt.
+
+Cần có, vì khi ảnh hỏng thì ứng dụng lặng lẽ giấu khung đi chứ không báo gì:
+nhìn bảng tính thấy ô có nội dung, mở app lại chẳng thấy hình, không lần ra
+được nguyên nhân. Các lỗi hàm này bắt:
+
+| Ô ghi | Vì sao hỏng |
+| --- | --- |
+| `http://...` | bản Android chạy trên scheme https, ảnh http bị chặn |
+| link thư mục Drive `/drive/folders/...` | phải là link từng tệp |
+| link Drive không rút được mã tệp | sai định dạng |
+| tệp Drive chưa mở công khai | máy người học không tải được |
+| tệp Drive đã xoá hoặc sai mã | không mở được |
+| chuỗi dài hơn 12 ký tự mà không phải link | ứng dụng bỏ qua, không coi là emoji |
+
+Luật kiểm tra chép đúng theo hàm `imageSource` trong `script.js`, nên cái gì
+hàm này bảo đạt thì ứng dụng hiện được.
