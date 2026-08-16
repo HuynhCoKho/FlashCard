@@ -192,7 +192,8 @@ function readWords_(sheetName) {
       answer: answer,
       aliases: splitAliases_(row[columns.aliases]),
       pronunciation: clean_(row[columns.pronunciation]),
-      note: clean_(row[columns.note])
+      note: clean_(row[columns.note]),
+      image: clean_(row[columns.image])
     };
   }).filter(Boolean);
 }
@@ -230,25 +231,32 @@ function readWordBatch_(sheetName, limit) {
       answer: answer,
       aliases: splitAliases_(row[columns.aliases]),
       pronunciation: clean_(row[columns.pronunciation]),
-      note: clean_(row[columns.note])
+      note: clean_(row[columns.note]),
+      image: clean_(row[columns.image])
     });
   }
 
   return words;
 }
 
+/**
+ * Bản trước bốc số ngẫu nhiên rồi loại trùng. Khi cần lấy gần hết sheet (sheet 134
+ * dòng mà xin 120 dòng) thì những lần bốc cuối cứ trúng đi trúng lại dòng đã có,
+ * vòng lặp chạy rất lâu. Xáo trộn Fisher-Yates chỉ trên phần đầu cho kết quả ngẫu
+ * nhiên tương đương mà số bước luôn bằng đúng số dòng cần lấy.
+ */
 function pickRandomRows_(lastRow, limit) {
   var maxDataRows = Math.max(0, lastRow - 1);
   var target = Math.min(maxDataRows, limit * 3);
-  var seen = {};
-  var rows = [];
-  while (rows.length < target) {
-    var rowNumber = 2 + Math.floor(Math.random() * maxDataRows);
-    if (seen[rowNumber]) continue;
-    seen[rowNumber] = true;
-    rows.push(rowNumber);
+  var pool = [];
+  for (var i = 0; i < maxDataRows; i += 1) pool.push(i + 2);
+  for (var j = 0; j < target; j += 1) {
+    var pick = j + Math.floor(Math.random() * (maxDataRows - j));
+    var swap = pool[j];
+    pool[j] = pool[pick];
+    pool[pick] = swap;
   }
-  return rows;
+  return pool.slice(0, target);
 }
 
 function detectColumns_(headers) {
@@ -268,16 +276,25 @@ function detectColumns_(headers) {
     'phien am', 'phat am', 'cach doc'
   ]);
   var note = findHeader_(normalized, ['note', 'notes', 'ghi chu', 'giai thich']);
+  var image = findHeader_(normalized, [
+    'hinh anh', 'hinh minh hoa', 'hinh', 'anh minh hoa', 'image', 'picture', 'photo', 'illustration'
+  ]);
 
   if (vi < 0) vi = 0;
   if (answer < 0 || answer === vi) answer = vi === 0 ? 1 : 0;
-  if (pronunciation < 0 && headers.length >= 5) pronunciation = 4;
+  // Sheet đời đầu để trống tiêu đề cột phiên âm, cột thứ 5 mặc định là phiên âm.
+  // Nhưng nếu cột đó đã nhận vai khác (ví dụ HÌNH) thì đừng giành lại.
+  if (pronunciation < 0 && headers.length >= 5
+    && image !== 4 && note !== 4 && aliases !== 4 && vi !== 4 && answer !== 4) {
+    pronunciation = 4;
+  }
   return {
     vi: vi,
     answer: answer,
     aliases: aliases,
     pronunciation: pronunciation,
-    note: note
+    note: note,
+    image: image
   };
 }
 

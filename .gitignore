@@ -1,5 +1,6 @@
 node_modules/
 www/
+pnpm-lock.yaml
 .build-downloads/
 .android-sdk/
 .jdk/

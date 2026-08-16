@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
     <meta name="theme-color" content="#15654e">
     <title>FlashCard học ngoại ngữ</title>
-    <link rel="stylesheet" href="styles.css?v=20260813-132">
+    <link rel="stylesheet" href="styles.css?v=20260816-133">
   </head>
   <body data-page="home">
     <div class="app-stamp" aria-hidden="true">
@@ -105,12 +105,14 @@
           <article id="flashcard" class="flashcard" aria-live="polite">
             <div class="card-face" data-face="0">
               <p class="card-kicker">Chọn bộ từ để bắt đầu</p>
+              <figure class="card-picture" aria-hidden="true" hidden></figure>
               <div class="vietnamese-text">Sẵn sàng</div>
               <p class="pronunciation-text" hidden></p>
               <p class="note-text" hidden></p>
             </div>
             <div class="card-face card-face-back" data-face="1">
               <p class="card-kicker">Dịch sang ngoại ngữ</p>
+              <figure class="card-picture" aria-hidden="true" hidden></figure>
               <div class="vietnamese-text">…</div>
               <p class="pronunciation-text" hidden></p>
               <p class="note-text" hidden></p>
@@ -160,6 +162,7 @@
     </main>
 
     <script src="config.js?v=20260805-130"></script>
-    <script src="script.js?v=20260813-132"></script>
+    <script src="pictograms.js?v=20260816-133"></script>
+    <script src="script.js?v=20260816-133"></script>
   </body>
 </html>

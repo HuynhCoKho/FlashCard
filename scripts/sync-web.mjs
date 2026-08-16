@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 const output = resolve(root, 'www');
-const files = ['index.html', 'privacy.html', 'styles.css', 'script.js', 'config.js', 'assets'];
+const files = ['index.html', 'privacy.html', 'styles.css', 'script.js', 'pictograms.js', 'config.js', 'assets'];
 
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });

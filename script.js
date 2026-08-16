@@ -5,7 +5,8 @@
   var pointsCorrect = Number(config.POINTS_CORRECT || 10);
   var pointsWrong = Number(config.POINTS_WRONG || -4);
   var recentWindow = Number(config.RECENT_WINDOW || 6);
-  var cacheVersion = 'v2';
+  // v3: mỗi từ có thêm trường image, bản lưu cũ thiếu nên phải nạp lại từ đầu.
+  var cacheVersion = 'v3';
   var cacheMaxAge = 24 * 60 * 60 * 1000;
 
   var els = {
@@ -43,6 +44,7 @@
     return {
       root: face,
       kicker: face.querySelector('.card-kicker'),
+      picture: face.querySelector('.card-picture'),
       vietnamese: face.querySelector('.vietnamese-text'),
       pronunciation: face.querySelector('.pronunciation-text'),
       note: face.querySelector('.note-text')
@@ -58,6 +60,9 @@
     current: null,
     recentIds: [],
     loadingMore: false,
+    emptyBatches: 0,
+    allWordsLoaded: false,
+    pictogramSheet: false,
     score: 0,
     correct: 0,
     wrong: 0,
@@ -91,9 +96,23 @@
     { keys: ['kid', 'tre em', 'thieu nhi'], icon: '🧸' }
   ];
 
-  /** Giữ lại MP3 đã tải trong phiên để một từ chỉ hỏi máy chủ đúng một lần. */
+  /**
+   * Giữ lại MP3 đã tải trong phiên để một từ chỉ hỏi máy chủ đúng một lần.
+   * Mỗi bản đọc là chuỗi base64 vài chục KB, học lâu sẽ phình bộ nhớ nên chỉ
+   * giữ lại những từ đọc gần đây nhất.
+   */
+  var REMOTE_AUDIO_LIMIT = 60;
   var remoteAudio = {};
+  var remoteAudioOrder = [];
   var currentAudio = null;
+
+  function rememberAudio(key, source) {
+    if (!Object.prototype.hasOwnProperty.call(remoteAudio, key)) remoteAudioOrder.push(key);
+    remoteAudio[key] = source;
+    while (remoteAudioOrder.length > REMOTE_AUDIO_LIMIT) {
+      delete remoteAudio[remoteAudioOrder.shift()];
+    }
+  }
 
   var FALLBACK_ICONS = ['📘', '🌟', '🍀', '🎯', '🧩', '🎨', '🔔', '🌈', '🧠', '🦉', '🐳', '🚂'];
   var AVATARS = ['👦', '👧', '🧒', '👨‍🎓', '👩‍🎓', '🧑', '👨‍🏫', '👩‍🏫', '🧑‍🎓', '👱‍♀️', '👱', '🧑‍🏫'];
@@ -425,6 +444,9 @@
     state.current = null;
     state.recentIds = [];
     state.loadingMore = false;
+    state.emptyBatches = 0;
+    state.allWordsLoaded = false;
+    state.pictogramSheet = false;
     state.score = 0;
     state.correct = 0;
     state.wrong = 0;
@@ -503,6 +525,7 @@
     if (selectionToken !== state.selectionToken || sheetName !== state.activeSheet) return;
     state.words = validWords(words);
     if (!state.words.length) return;
+    state.pictogramSheet = sheetUsesPictograms(sheetName, state.words[0].answer);
     setStatus(fromCache ? 'Sẵn sàng từ dữ liệu đã lưu' : 'Đã sẵn sàng', 'ok');
     els.answerInput.disabled = false;
     els.submitButton.disabled = false;
@@ -515,7 +538,7 @@
   function nextCard() {
     if (!state.words.length) return;
     var answered = state.correct + state.wrong;
-    if ((state.words.length < 12 || (answered > 0 && answered % 20 === 0)) && !state.loadingMore) {
+    if (state.words.length < 12 || (answered > 0 && answered % 20 === 0)) {
       fetchMoreWords();
     }
     var candidates = state.words.filter(function (word) {
@@ -538,25 +561,36 @@
       });
   }
 
+  /**
+   * Bộ từ nhỏ hơn 12 từ khiến nextCard gọi hàm này ở mọi thẻ. Trước đây mỗi lượt
+   * lại bắn một yêu cầu mới dù máy chủ chẳng còn từ nào để trả, gây bão gọi mạng.
+   * Hai lượt liên tiếp không thêm được từ nào thì coi như đã lấy hết và dừng hẳn.
+   */
   function fetchMoreWords() {
-    if (!state.activeSheet) return;
+    if (!state.activeSheet || state.loadingMore || state.allWordsLoaded) return;
+    var selectionToken = state.selectionToken;
     state.loadingMore = true;
     api({ action: 'batch', sheet: state.activeSheet, limit: 40 }, 90000)
       .then(function (payload) {
+        if (selectionToken !== state.selectionToken) return;
         var existing = {};
         state.words.forEach(function (word) {
           existing[word.id] = true;
         });
+        var added = 0;
         (payload.words || []).forEach(function (word) {
           if (word && word.vi && word.answer && !existing[word.id]) {
             state.words.push(word);
             existing[word.id] = true;
+            added += 1;
           }
         });
+        state.emptyBatches = added ? 0 : state.emptyBatches + 1;
+        if (state.emptyBatches >= 2) state.allWordsLoaded = true;
       })
       .catch(function () {})
-      .finally(function () {
-        state.loadingMore = false;
+      .then(function () {
+        if (selectionToken === state.selectionToken) state.loadingMore = false;
       });
   }
 
@@ -571,18 +605,115 @@
   function writeFace(face, content) {
     face.kicker.textContent = content.kicker || 'Dịch sang ngoại ngữ';
     face.vietnamese.textContent = content.vi || '';
+    writePicture(face, content.image || null);
     if (content.pronunciation) {
       face.pronunciation.textContent = content.pronunciation;
       face.pronunciation.hidden = false;
     } else {
+      face.pronunciation.textContent = '';
       face.pronunciation.hidden = true;
     }
     if (content.note) {
       face.note.textContent = '(' + content.note + ')';
       face.note.hidden = false;
     } else {
+      face.note.textContent = '';
       face.note.hidden = true;
     }
+    syncPictureLayout();
+  }
+
+  /* ================= Hình minh hoạ cho từ gốc ================= */
+
+  var DRIVE_ID_PATTERN = /^[A-Za-z0-9_-]{20,80}$/;
+
+  /**
+   * Ô HÌNH trong Google Sheet nhận nhiều kiểu ghi cho tiện: dán nguyên đường dẫn
+   * chia sẻ của Drive, dán riêng mã tệp, dán một địa chỉ ảnh bất kỳ, hoặc gõ luôn
+   * một emoji. Đường dẫn "…/file/d/<id>/view" không hiện được trong thẻ <img> nên
+   * phải đổi sang địa chỉ ảnh thu nhỏ của Drive.
+   */
+  function driveThumbnail(id) {
+    return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w480';
+  }
+
+  function imageSource(raw) {
+    var value = compactSpaces(raw);
+    if (!value) return null;
+
+    if (/^https?:\/\//i.test(value)) {
+      var drive = value.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:[^#]*&)?id=)([A-Za-z0-9_-]+)/);
+      if (drive) return { kind: 'url', value: driveThumbnail(drive[1]) };
+      // Chỉ nhận https: bản Android chạy trên scheme https, ảnh http sẽ bị chặn.
+      return /^https:\/\//i.test(value) ? { kind: 'url', value: value } : null;
+    }
+
+    if (DRIVE_ID_PATTERN.test(value)) return { kind: 'url', value: driveThumbnail(value) };
+    // Còn lại coi là emoji hoặc ký hiệu gõ tay; dài quá thì không phải hình.
+    return value.length <= 12 ? { kind: 'emoji', value: value } : null;
+  }
+
+  /**
+   * Bộ hình dựng sẵn tra theo từ tiếng Anh. Sheet tiếng khác mà tra bừa thì sai
+   * nghĩa (tiếng Đức "bad" là phòng tắm chứ không phải "tệ"), nên chỉ dùng khi
+   * bộ từ đúng là tiếng Anh. Cột HÌNH thì sheet nào cũng dùng được.
+   */
+  function sheetUsesPictograms(sheetName, sampleWord) {
+    if (!window.FLASHCARD_PICTOGRAMS) return false;
+    var candidates = guessLanguageCandidates(sheetName, sampleWord || '');
+    return baseLanguage(candidates[0]) === 'en';
+  }
+
+  function resolveImage(word) {
+    if (!word) return null;
+    var fromSheet = imageSource(word.image);
+    if (fromSheet) return fromSheet;
+    if (!state.pictogramSheet) return null;
+    var drawn = window.FLASHCARD_PICTOGRAMS.resolve(word.answer);
+    return drawn ? { kind: drawn.kind, value: drawn.value } : null;
+  }
+
+  function writePicture(face, image) {
+    var node = face.picture;
+    if (!node) return;
+    node.textContent = '';
+    if (!image) {
+      node.hidden = true;
+      return;
+    }
+    node.hidden = false;
+
+    if (image.kind === 'svg') {
+      // Chuỗi SVG do chính pictograms.js dựng, không có dữ liệu từ bên ngoài.
+      node.innerHTML = image.value;
+    } else if (image.kind === 'url') {
+      var img = document.createElement('img');
+      img.className = 'picture-photo';
+      img.alt = '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      // Ảnh hỏng hoặc mất mạng thì giấu khung đi, đừng để ô trống lơ lửng.
+      img.addEventListener('error', function () {
+        node.textContent = '';
+        node.hidden = true;
+        syncPictureLayout();
+      });
+      img.src = image.value;
+      node.appendChild(img);
+    } else {
+      var glyph = document.createElement('span');
+      glyph.className = 'picture-emoji';
+      glyph.textContent = image.value;
+      node.appendChild(glyph);
+    }
+  }
+
+  /** Thẻ chỉ cao thêm khi thật sự có hình, bộ từ không có hình vẫn gọn như cũ. */
+  function syncPictureLayout() {
+    var showing = faces.some(function (face) {
+      return face.picture && !face.picture.hidden;
+    });
+    els.flashcard.classList.toggle('has-picture', showing);
   }
 
   function setCardState(mode) {
@@ -598,6 +729,7 @@
     writeFace(target, {
       kicker: 'Dịch sang ngoại ngữ',
       vi: word.vi,
+      image: resolveImage(word),
       pronunciation: word.pronunciation,
       note: word.note
     });
@@ -673,7 +805,7 @@
    */
   function speakFromServer(text, language, engine) {
     var key = (language || '') + '|' + text;
-    if (remoteAudio[key]) {
+    if (Object.prototype.hasOwnProperty.call(remoteAudio, key)) {
       playAudio(remoteAudio[key]);
       return;
     }
@@ -682,7 +814,7 @@
       .then(function (payload) {
         if (!payload.audio) throw new Error('Không có âm thanh.');
         var source = 'data:' + (payload.mime || 'audio/mpeg') + ';base64,' + payload.audio;
-        remoteAudio[key] = source;
+        rememberAudio(key, source);
         playAudio(source);
       })
       .catch(function () { warnMissingVoice(language, engine); });
@@ -1052,6 +1184,8 @@
     acceptedAnswerVariants: acceptedAnswerVariants,
     guessLanguageCandidates: guessLanguageCandidates,
     sheetIcon: sheetIcon,
-    avatarFor: avatarFor
+    avatarFor: avatarFor,
+    imageSource: imageSource,
+    sheetUsesPictograms: sheetUsesPictograms
   };
 })();
