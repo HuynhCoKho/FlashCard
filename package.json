@@ -6,7 +6,8 @@
     "sync:web": "node scripts/sync-web.mjs",
     "android:sync": "npm run sync:web && cap sync android",
     "android:build": "npm run android:sync && cd android && gradlew.bat assembleDebug",
-    "android:bundle": "npm run android:sync && cd android && gradlew.bat bundleRelease"
+    "android:bundle": "npm run android:sync && cd android && gradlew.bat bundleRelease",
+    "android:release": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-release.ps1"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
