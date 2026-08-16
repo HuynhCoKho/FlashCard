@@ -1041,25 +1041,56 @@ function dienCotHinh() {
 
     if (cot.image < 0) sheet.getRange(1, cotHinh).setValue('HÌNH');
 
-    var values = sheet.getRange(2, 1, lastRow - 1, lastCol).getDisplayValues();
-    var hienCo = sheet.getRange(2, cotHinh, lastRow - 1, 1).getDisplayValues();
-    var moi = [];
-    var them = 0;
+    var soDong = lastRow - 1;
+    var values = sheet.getRange(2, 1, soDong, lastCol).getDisplayValues();
+    var oHinh = sheet.getRange(2, cotHinh, soDong, 1);
+    var congThuc = oHinh.getFormulas();
+    var giaTri = oHinh.getValues();
 
-    for (var r = 0; r < values.length; r += 1) {
-      var dangCo = clean_(hienCo[r][0]);
-      if (dangCo) { moi.push([dangCo]); continue; }
+    var moi = [];
+    var khoa = [];
+    var them = 0;
+    var soAnhTrongO = 0;
+
+    for (var r = 0; r < soDong; r += 1) {
+      var ct = congThuc[r][0];
+      var gt = giaTri[r][0];
+
+      // Ảnh chèn thẳng vào ô (Chèn > Hình ảnh trong ô) về đây là một đối tượng,
+      // không phải chuỗi. Ghi đè lên là mất ảnh, nên khoá hẳn dòng đó lại.
+      if (gt && typeof gt === 'object') {
+        moi.push(['']);
+        khoa.push(true);
+        soAnhTrongO += 1;
+        continue;
+      }
+      // Công thức (ví dụ =IMAGE("...")) hiển thị ra chuỗi rỗng, nhìn qua tưởng ô
+      // trống. Phải đọc riêng công thức mới biết là ô đã có nội dung.
+      if (ct) { moi.push([ct]); khoa.push(false); continue; }
+      // Giữ nguyên si giá trị đang có, không chuẩn hoá khoảng trắng gì cả.
+      if (String(gt).trim()) { moi.push([gt]); khoa.push(false); continue; }
+
       var vi = clean_(values[r][cot.vi]);
       var answer = clean_(values[r][cot.answer]);
-      if (!vi || !answer) { moi.push(['']); continue; }
-      var hinh = chonHinh_(vi, answer);
+      var hinh = (vi && answer) ? chonHinh_(vi, answer) : '';
       if (hinh) them += 1;
       moi.push([hinh]);
+      khoa.push(false);
     }
 
-    sheet.getRange(2, cotHinh, moi.length, 1).setValues(moi);
+    // Ghi theo từng đoạn liền mạch, nhảy qua các dòng đang giữ ảnh trong ô.
+    var dau = 0;
+    while (dau < soDong) {
+      if (khoa[dau]) { dau += 1; continue; }
+      var cuoi = dau;
+      while (cuoi + 1 < soDong && !khoa[cuoi + 1]) cuoi += 1;
+      sheet.getRange(2 + dau, cotHinh, cuoi - dau + 1, 1).setValues(moi.slice(dau, cuoi + 1));
+      dau = cuoi + 1;
+    }
+
     tongMoi += them;
-    dong.push(ten + ': thêm ' + them + ' hình (cột ' + cotHinh + ')');
+    dong.push(ten + ': thêm ' + them + ' hình (cột ' + cotHinh + ')'
+      + (soAnhTrongO ? ', giữ nguyên ' + soAnhTrongO + ' ảnh chèn trong ô' : ''));
   }
 
   var ketQua = dong.join('\n') + '\n\nTỔNG CỘNG THÊM MỚI: ' + tongMoi;

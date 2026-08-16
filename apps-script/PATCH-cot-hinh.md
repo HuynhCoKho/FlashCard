@@ -50,10 +50,28 @@ lần cũng được — thêm từ mới vào bảng tính rồi chạy lại l
 
 Hai điều script không bao giờ làm:
 
-- **Không đè ô đã có hình.** Hình điền tay giữ nguyên tuyệt đối.
+- **Không đè ô đã có nội dung.** Chỉ ô trống mới được điền.
 - **Không đụng sheet Starters.** Bộ hình dựng sẵn trong `pictograms.js` vẽ hẳn
   SVG cho màu sắc, số đếm, giới từ và đại từ — emoji không diễn tả nổi, mà cột
   HÌNH lại được ưu tiên hơn nên sẽ lấn át mất.
+
+### Điền tay rồi chạy lại có mất không
+
+Không. Ô đang có nội dung được giữ nguyên si, kể cả những kiểu nhìn qua tưởng ô
+trống:
+
+| Kiểu ô | Chạy lại thì sao |
+| --- | --- |
+| Emoji tự chọn khác bộ mặc định | giữ nguyên |
+| Chữ có khoảng trắng thừa hai bên | giữ nguyên từng ký tự, không chuẩn hoá |
+| Link Drive tự dán | giữ nguyên |
+| Công thức `=IMAGE("...")` | giữ nguyên công thức |
+| Ảnh chèn thẳng vào ô (Chèn › Hình ảnh trong ô) | không ghi vào dòng đó |
+
+Hai dòng cuối là chỗ dễ mất nhất: cả hai đều trả về chuỗi rỗng khi đọc bằng
+`getDisplayValues()`, nhìn qua y hệt ô trống. Script phải đọc thêm
+`getFormulas()` và `getValues()` mới phân biệt được, và ghi theo từng đoạn liền
+mạch để nhảy qua những dòng đang giữ ảnh trong ô.
 
 Độ phủ đo trên 26.251 từ: điền được 8.850 hình (34%). Sheet ngôn ngữ nhập môn
 phủ 40–50%, sheet học thuật (SAT, IELTS) thấp hơn nhiều vì phần lớn là từ trừu
