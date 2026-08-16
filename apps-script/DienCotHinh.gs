@@ -1151,7 +1151,11 @@ var NGHIA_SANG_HINH = {
   'ga tàu': '🚉',
   'trạm': '🚉',
   'vằn ngựa': '🦓',
-  'bánh mì kẹp xúc xích': '🌭'
+  'bánh mì kẹp xúc xích': '🌭',
+  'biết ơn': '🙏',
+  'đến muộn': '⏰',
+  'đúng giờ': '⏰',
+  'người chơi': '🎮'
 };
 
 // Chữ đứng đầu chỉ để phân loại, bỏ đi để lấy lõi nghĩa.
@@ -1162,6 +1166,22 @@ var LOAI_TU = [
 ];
 
 var SHEET_BO_QUA = { LEADERBOARD: true, STATS: true, LOG: true, LINKS: true, CONFIG: true, STARTERS: true };
+
+/**
+ * Những tiếng quá nhiều nghĩa, cấm dùng làm tiếng chính của cụm hai tiếng.
+ * "nước ngoài" không phải một loại nước, "hành lý" không phải một loại hành,
+ * "đầu vào" không phải cái đầu, "bạn đúng" không phải bạn bè.
+ */
+var CAM_LAM_DAU = {};
+[
+  'nước', 'hành', 'công', 'băng', 'chiều', 'đường', 'cửa', 'bàn', 'cái', 'con',
+  'đá', 'bò', 'ga', 'cân', 'chì', 'sao', 'bay', 'cờ', 'đô', 'tay', 'chân',
+  'mắt', 'miệng', 'lá', 'hoa', 'cây', 'quả', 'sông', 'bạc', 'vàng', 'kim',
+  'lửa', 'gió', 'mây', 'sương', 'tim', 'gan', 'da', 'xương', 'máu', 'nhà',
+  'phòng', 'bếp', 'giường', 'ghế', 'sách', 'bút', 'thư', 'tiền', 'vé', 'đèn',
+  'bạn', 'tôi', 'ta', 'mình', 'nó', 'họ', 'ai', 'gì', 'này', 'đó', 'kia',
+  'đầu', 'lớp', 'khối', 'điểm', 'mức', 'vùng', 'khung', 'nút', 'cổng', 'trục'
+].forEach(function (t) { CAM_LAM_DAU[t] = true; });
 
 var CUM_NHIEU_TIENG = null;
 
@@ -1200,6 +1220,14 @@ function traNghia_(text) {
       var con = text.slice(dau.length).trim();
       if (Object.prototype.hasOwnProperty.call(NGHIA_SANG_HINH, con)) return NGHIA_SANG_HINH[con];
     }
+  }
+  // Tiếng Việt đặt tiếng chính trước, phần sau chỉ bổ nghĩa: "trứng gà" vẫn là
+  // trứng, "em gái" vẫn là em, "quà tặng" vẫn là quà. Chỉ nhận cụm đúng hai
+  // tiếng và tiếng đầu không nằm trong danh sách cấm.
+  var toks = text.split(' ');
+  if (toks.length === 2 && !CAM_LAM_DAU[toks[0]]
+    && Object.prototype.hasOwnProperty.call(NGHIA_SANG_HINH, toks[0])) {
+    return NGHIA_SANG_HINH[toks[0]];
   }
   var padded = ' ' + text + ' ';
   var cum = cumNhieuTieng_();

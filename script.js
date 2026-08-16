@@ -746,12 +746,29 @@
       img.className = 'picture-photo';
       img.alt = '';
       img.loading = 'lazy';
+      // Giải mã ngoài luồng chính: ảnh nặng cũng không làm khựng lúc lật thẻ.
       img.decoding = 'async';
-      // Ảnh hỏng hoặc mất mạng thì giấu khung đi, đừng để ô trống lơ lửng.
-      img.addEventListener('error', function () {
+      // Nhiều máy chủ ảnh chặn theo referrer; bỏ referrer đi thì tải được rộng hơn.
+      img.referrerPolicy = 'no-referrer';
+
+      var xong = false;
+      function boKhung() {
+        if (xong) return;
+        xong = true;
+        window.clearTimeout(hetGio);
         node.textContent = '';
         node.hidden = true;
         syncPictureLayout();
+      }
+      // Ảnh hỏng, sai địa chỉ, hoặc tệp Drive chưa mở công khai.
+      img.addEventListener('error', boKhung);
+      // Máy chủ ảnh có lúc treo luôn không trả lời: quá 8 giây thì thôi, đừng
+      // để người học nhìn một khung rỗng mãi. Thẻ vẫn chơi được bình thường vì
+      // ảnh tải riêng, không chặn gì.
+      var hetGio = window.setTimeout(boKhung, 8000);
+      img.addEventListener('load', function () {
+        xong = true;
+        window.clearTimeout(hetGio);
       });
       img.src = image.value;
       node.appendChild(img);

@@ -73,9 +73,25 @@ Hai dòng cuối là chỗ dễ mất nhất: cả hai đều trả về chuỗi
 `getFormulas()` và `getValues()` mới phân biệt được, và ghi theo từng đoạn liền
 mạch để nhảy qua những dòng đang giữ ảnh trong ô.
 
-Độ phủ đo trên 26.251 từ: điền được **11.031 hình (42%)** từ 1.103 khái niệm.
-Sheet ngôn ngữ và chuyên ngành phủ 40–57%, riêng SAT và IELTS thấp hơn nhiều vì
-phần lớn là từ trừu tượng — chỗ đó thà để trống còn hơn gán hình sai.
+Độ phủ đo trên 26.251 từ: điền được **13.388 hình (51%)** từ 1.141 khái niệm.
+
+Phần còn trống gần như toàn bộ là từ trừu tượng (`although`, `willing`,
+`probability`, `at least`) hoặc nguyên câu (`It doesn't matter.`) — không hình
+nào tả đúng được, và để trống thì ứng dụng vẫn chạy bình thường. Đó là kết quả
+đúng, không phải chỗ còn thiếu sót.
+
+### Ba lớp luật tra nghĩa
+
+1. **Trùng khít cả vế nghĩa** — chắc chắn nhất.
+2. **Bỏ loại từ đứng đầu** (`con`, `cái`, `quả`, `ngọn`…) rồi tra phần còn lại.
+3. **Lấy tiếng chính của cụm hai tiếng** — tiếng Việt đặt tiếng chính trước nên
+   `trứng gà` vẫn là trứng, `em gái` vẫn là em.
+4. **Khớp cụm từ hai tiếng trở lên nằm trong nghĩa dài** — dài nhất được ưu tiên.
+
+Luật 3 và 4 có danh sách chặn `CAM_LAM_DAU`: những tiếng quá nhiều nghĩa không
+được làm tiếng chính. Đây chính là chỗ từng sinh ra hình sai — `ở nước ngoài`
+thành nước uống, `hành vi` thành củ hành, `đầu vào` thành cái đầu, `lớp ẩn`
+thành lớp học, `bạn đúng` thành bạn bè.
 
 ## Soát cột HÌNH trước khi tin nó
 
