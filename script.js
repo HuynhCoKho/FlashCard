@@ -543,10 +543,27 @@
     });
   }
 
-  /** Trả về số từ thật sự mới, để biết có cần báo lại trạng thái không. */
+  var WORD_FIELDS = ['vi', 'answer', 'aliases', 'pronunciation', 'note', 'image'];
+
+  /**
+   * Trả về số từ thật sự mới, để biết có cần báo lại trạng thái không.
+   *
+   * Từ đã có thì cập nhật nội dung tại chỗ chứ không bỏ qua: bản lưu trong máy
+   * sống 24 giờ, nên khi bảng tính vừa được điền thêm hình mà chỉ thêm từ mới
+   * thì người học phải thoát vào lại mới thấy hình. Sửa ngay trên đúng đối
+   * tượng cũ để state.byId, bộ bài và thẻ đang mở vẫn trỏ về một chỗ.
+   */
   function addWords(words) {
-    var fresh = validWords(words).filter(function (word) {
-      return !state.byId[word.id];
+    var fresh = [];
+    validWords(words).forEach(function (word) {
+      var known = state.byId[word.id];
+      if (!known) {
+        fresh.push(word);
+        return;
+      }
+      WORD_FIELDS.forEach(function (field) {
+        if (word[field] !== undefined) known[field] = word[field];
+      });
     });
     if (!fresh.length) return 0;
     fresh.forEach(function (word) {
